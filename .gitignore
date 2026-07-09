@@ -1,0 +1,4 @@
+# artefactos temporales
+.preview-*.png
+node_modules/
+.DS_Store

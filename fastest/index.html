@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#05060f" />
+  <title>Fastest</title>
+
+  <!-- PWA / iOS -->
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Fastest" />
+  <link rel="apple-touch-icon" href="./icons/icon-180.png" />
+  <link rel="icon" type="image/png" href="./icons/icon-192.png" />
+
+  <!-- Fuentes racing (con fallback del sistema si no hay red) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Mapa (Leaflet) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body>
+  <!-- ================= PANTALLA DE BIENVENIDA / AVISO ================= -->
+  <div id="onboarding" class="onboarding hidden">
+    <div class="onboarding-card glass">
+      <div class="logo-big">FASTEST</div>
+      <p class="tagline">Tu ciudad es la pista.</p>
+      <ul class="onb-list">
+        <li>🏁 Detecta cuando arrancas y mide tu velocidad en tiempo real.</li>
+        <li>🗺️ Traza tu ruta y la divide en rectas y curvas.</li>
+        <li>⭐ Gana estrellas, sube de nivel y desbloquea recompensas.</li>
+        <li>🎡 Gira la ruleta cada 10 manejos.</li>
+      </ul>
+      <div class="safety-note">
+        <strong>Maneja con responsabilidad.</strong> Fastest premia la constancia y la línea limpia, no solo la velocidad. Respeta siempre los límites y las leyes de tránsito. Coloca el teléfono en un soporte; nunca lo uses manejando.
+      </div>
+      <button id="onbAccept" class="btn-primary">Empezar</button>
+    </div>
+  </div>
+
+  <!-- ================= HUD DE MANEJO (pantalla principal) ================= -->
+  <section id="screen-drive" class="screen active">
+    <div id="map"></div>
+
+    <div class="hud-overlay">
+      <div class="hud-top glass-soft">
+        <div class="player-chip">
+          <span class="rank-badge" id="hudRank">Novato</span>
+          <div class="lvl-wrap">
+            <div class="lvl-line"><span id="hudLevel">Nv 1</span><span id="hudFp">0 FP</span></div>
+            <div class="xp-bar"><div class="xp-fill" id="hudXp"></div></div>
+          </div>
+        </div>
+        <button class="icon-btn" id="btnGarage" aria-label="Garage">🏆</button>
+      </div>
+
+      <div class="speedo-wrap">
+        <div class="speedo">
+          <svg viewBox="0 0 220 220" class="speedo-svg">
+            <circle class="speedo-track" cx="110" cy="110" r="94" />
+            <circle class="speedo-arc" id="speedoArc" cx="110" cy="110" r="94" />
+          </svg>
+          <div class="speedo-center">
+            <div class="speed-value" id="speedValue">0</div>
+            <div class="speed-unit">km/h</div>
+          </div>
+        </div>
+        <div class="combo-badge hidden" id="comboBadge">COMBO x1</div>
+      </div>
+
+      <div class="live-stats glass-soft">
+        <div class="stat"><span class="stat-num" id="statDist">0.0</span><span class="stat-lbl">km</span></div>
+        <div class="stat"><span class="stat-num" id="statAvg">0</span><span class="stat-lbl">prom km/h</span></div>
+        <div class="stat"><span class="stat-num" id="statMax">0</span><span class="stat-lbl">máx km/h</span></div>
+        <div class="stat"><span class="stat-num" id="statTime">0:00</span><span class="stat-lbl">tiempo</span></div>
+      </div>
+
+      <div class="hud-bottom">
+        <div class="status-pill" id="statusPill">Toca ▶ y ponte en marcha</div>
+        <button id="btnDrive" class="btn-drive">▶</button>
+      </div>
+    </div>
+
+    <div class="toast-stack" id="toastStack"></div>
+  </section>
+
+  <!-- ================= RESUMEN DEL MANEJO ================= -->
+  <section id="screen-summary" class="screen">
+    <div class="sheet">
+      <div class="sheet-head">
+        <button class="icon-btn" data-nav="drive">✕</button>
+        <h2>Resumen del manejo</h2>
+        <span></span>
+      </div>
+      <div id="summaryBody" class="sheet-body"></div>
+    </div>
+  </section>
+
+  <!-- ================= GARAGE / PERFIL ================= -->
+  <section id="screen-garage" class="screen">
+    <div class="sheet">
+      <div class="sheet-head">
+        <button class="icon-btn" data-nav="drive">✕</button>
+        <h2>Garage</h2>
+        <span></span>
+      </div>
+      <div class="tabs">
+        <button class="tab active" data-tab="perfil">Perfil</button>
+        <button class="tab" data-tab="zonas">Zonas</button>
+        <button class="tab" data-tab="premios">Premios</button>
+        <button class="tab" data-tab="historial">Historial</button>
+      </div>
+      <div id="garageBody" class="sheet-body"></div>
+    </div>
+  </section>
+
+  <!-- ================= RULETA ================= -->
+  <section id="screen-wheel" class="screen">
+    <div class="wheel-scene">
+      <button class="icon-btn wheel-close" data-nav="drive">✕</button>
+      <h2 class="wheel-title">La Ruleta</h2>
+      <p class="wheel-sub" id="wheelSub">Gira y prueba tu suerte</p>
+      <div class="wheel-holder">
+        <div class="wheel-pointer">▼</div>
+        <canvas id="wheelCanvas" width="320" height="320"></canvas>
+      </div>
+      <button id="btnSpin" class="btn-primary">GIRAR</button>
+      <div id="wheelResult" class="wheel-result"></div>
+    </div>
+  </section>
+
+  <!-- Modal de recompensa (level up / desbloqueo) -->
+  <div id="rewardModal" class="reward-modal hidden">
+    <div class="reward-card glass">
+      <div class="reward-emoji" id="rewardEmoji">🎉</div>
+      <div class="reward-title" id="rewardTitle"></div>
+      <div class="reward-desc" id="rewardDesc"></div>
+      <button class="btn-primary" id="rewardClose">¡Genial!</button>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
