@@ -56,7 +56,30 @@ function boot() {
   if (!state.signedIn) $("#signin").classList.remove("hidden");
   else afterSignin();
 
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(() => {});
+  registerSW();
+}
+
+// registra el SW y recarga automáticamente cuando hay versión nueva
+function registerSW() {
+  if (!("serviceWorker" in navigator)) return;
+  // Solo recargamos si la página YA estaba controlada por un SW previo
+  // (así una actualización se aplica sola; en la primera visita no recarga).
+  if (navigator.serviceWorker.controller) {
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (reloaded) return; reloaded = true; location.reload();
+    });
+  }
+  navigator.serviceWorker.register("./sw.js").then((reg) => {
+    reg.addEventListener("updatefound", () => {
+      const nw = reg.installing;
+      if (!nw) return;
+      nw.addEventListener("statechange", () => {
+        if (nw.state === "installed" && navigator.serviceWorker.controller) nw.postMessage("skipWaiting");
+      });
+    });
+    setInterval(() => reg.update().catch(() => {}), 60000);
+  }).catch(() => {});
 }
 
 // ---- acceso ----

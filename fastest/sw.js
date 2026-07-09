@@ -1,18 +1,15 @@
 // ================= Service Worker · Fastest =================
-const CACHE = "fastest-v1";
+// Estrategia: "red primero" para el código de la app (HTML/JS/CSS) para que
+// SIEMPRE se vea la versión más reciente; respaldo desde caché si no hay red.
+const VERSION = "v3";
+const CACHE = "fastest-" + VERSION;
 const ASSETS = [
-  "./",
-  "./index.html",
-  "./css/styles.css",
-  "./js/app.js",
-  "./js/storage.js",
-  "./js/tracker.js",
-  "./js/analysis.js",
-  "./js/map.js",
-  "./js/rewards.js",
-  "./manifest.webmanifest",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png",
+  "./", "./index.html", "./css/styles.css",
+  "./js/app.js", "./js/storage.js", "./js/tracker.js", "./js/analysis.js",
+  "./js/map.js", "./js/rewards.js", "./js/fog.js", "./js/tutorial.js",
+  "./js/spots.js", "./js/achievements.js", "./js/leaderboard.js",
+  "./js/sfx.js", "./js/circuits.js", "./js/icons.js",
+  "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png",
 ];
 
 self.addEventListener("install", (e) => {
@@ -25,18 +22,24 @@ self.addEventListener("activate", (e) => {
   );
 });
 
+self.addEventListener("message", (e) => { if (e.data === "skipWaiting") self.skipWaiting(); });
+
 self.addEventListener("fetch", (e) => {
-  const url = new URL(e.request.url);
-  // mapas y fuentes: red primero (necesitan datos frescos)
-  if (url.host.includes("basemaps") || url.host.includes("tile") || url.host.includes("fonts")) return;
-  // app shell: cache primero, con respaldo de red
-  e.respondWith(
-    caches.match(e.request).then((hit) => hit || fetch(e.request).then((res) => {
-      if (e.request.method === "GET" && res.ok && url.origin === location.origin) {
+  const req = e.request;
+  if (req.method !== "GET") return;
+  const url = new URL(req.url);
+
+  // mapas y fuentes: siempre red (no cachear)
+  if (url.host.includes("basemaps") || url.host.includes("tile") || url.host.includes("fonts") || url.host.includes("unpkg")) return;
+
+  // código propio: red primero, con respaldo de caché
+  if (url.origin === location.origin) {
+    e.respondWith(
+      fetch(req).then((res) => {
         const clone = res.clone();
-        caches.open(CACHE).then((c) => c.put(e.request, clone));
-      }
-      return res;
-    }).catch(() => caches.match("./index.html")))
-  );
+        caches.open(CACHE).then((c) => c.put(req, clone)).catch(() => {});
+        return res;
+      }).catch(() => caches.match(req).then((hit) => hit || caches.match("./index.html")))
+    );
+  }
 });
