@@ -15,21 +15,29 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="./css/styles.css" />
 </head>
 <body>
+  <!-- ============ ACCESO (Sign in) ============ -->
+  <div id="signin" class="overlay hidden">
+    <div class="signin-bg"></div>
+    <div class="signin-card">
+      <div class="brand-mark xl"><span class="bm-a">FAST</span><span class="bm-b">EST</span><i class="bm-slash"></i></div>
+      <p class="tagline">Tu ciudad es la pista.</p>
+      <button id="appleBtn" class="apple-btn"></button>
+      <button id="guestBtn" class="link-btn">Continuar sin cuenta</button>
+      <p class="fineprint">Tu cuenta se guarda en este dispositivo. El inicio de sesión con Apple ID completo se activará con el servidor.</p>
+    </div>
+  </div>
+
   <!-- ============ ONBOARDING ============ -->
   <div id="onboarding" class="overlay hidden">
     <div class="onb-card">
       <div class="brand-mark xl"><span class="bm-a">FAST</span><span class="bm-b">EST</span><i class="bm-slash"></i></div>
       <p class="tagline">Tu ciudad es la pista.</p>
-      <ul class="onb-list">
-        <li><b>🗺️ Desbloquea el mapa</b> conforme recorres tu ciudad.</li>
-        <li><b>⚡ Mide tu velocidad</b> en cada recta y curva.</li>
-        <li><b>🏆 Sube de rango</b> y compite en el Ranking.</li>
-      </ul>
+      <ul class="onb-list" id="onbList"></ul>
       <div class="safety-note"><b>Maneja responsable.</b> Fastest premia la constancia y la línea limpia, no solo la velocidad. Respeta los límites y las leyes de tránsito. Usa un soporte; nunca manipules el teléfono conduciendo.</div>
       <button id="onbAccept" class="btn-primary">Comenzar</button>
     </div>
@@ -48,6 +56,11 @@
           </div>
         </div>
         <div class="explore-chip glass" id="exploreChip">🗺️ <b id="exploreP">0%</b></div>
+      </div>
+      <div class="circuit-banner glass hidden" id="circuitBanner">
+        <div class="cb-info"><b id="cbName">Circuito</b><span id="cbState">Ve a la salida 🏁</span></div>
+        <div class="cb-timer" id="cbTimer">0:00</div>
+        <button class="cb-cancel" id="cbCancel">✕</button>
       </div>
 
       <div class="speedo-wrap">
@@ -77,6 +90,14 @@
       </div>
     </div>
     <div class="toasts" id="toastStack"></div>
+  </section>
+
+  <!-- ============ TAB: CIRCUITOS ============ -->
+  <section id="tab-circuits" class="tabview">
+    <div class="page">
+      <div class="page-head"><h2>Circuitos</h2><button class="btn-invite" id="btnNewCircuit">＋ Crear</button></div>
+      <div id="circuitsBody" class="page-body"></div>
+    </div>
   </section>
 
   <!-- ============ TAB: RANKING ============ -->
@@ -109,6 +130,10 @@
     <button class="tabbtn active" data-go="drive">
       <svg viewBox="0 0 24 24" class="ti"><path d="M12 3a9 9 0 0 0-9 9 9 9 0 0 0 1.5 5h15A9 9 0 0 0 21 12a9 9 0 0 0-9-9Z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 12l4-3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       <span>Conducir</span>
+    </button>
+    <button class="tabbtn" data-go="circuits">
+      <svg viewBox="0 0 24 24" class="ti"><path d="M7 21c-2 0-4-1.4-4-3.6 0-3 4-3.4 4-6.4S3 8 3 6.5 4.8 3 7 3h9c2.2 0 4 1.4 4 3.4 0 3-5 3.2-5 6.6s4 2.6 4 5.4S20 21 18 21Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+      <span>Circuitos</span>
     </button>
     <button class="tabbtn" data-go="rank">
       <svg viewBox="0 0 24 24" class="ti"><path d="M6 20V10M12 20V4M18 20v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -156,6 +181,25 @@
           <label class="fld"><span>Modelo</span><input id="fModel" maxlength="20" placeholder="Skyline R34" /></label>
         </div>
         <label class="fld"><span>Placa (opcional)</span><input id="fPlate" maxlength="12" placeholder="SIN-0000" /></label>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ OVERLAY: CONSTRUCTOR DE CIRCUITOS ============ -->
+  <section id="ov-builder" class="sheet-ov hidden">
+    <div class="builder">
+      <div id="builderMap"></div>
+      <div class="builder-top glass">
+        <button class="icon-btn" data-close="builder">✕</button>
+        <div class="builder-hint">Toca el mapa: 1° <b>salida</b>, luego el trazo, y el último punto es la <b>meta</b> 🏁</div>
+      </div>
+      <div class="builder-bottom glass">
+        <div class="builder-info"><b id="builderDist">0.0 km</b><span id="builderPts">0 puntos</span></div>
+        <div class="builder-actions">
+          <button class="icon-btn" id="builderUndo">↶</button>
+          <button class="icon-btn" id="builderClear">🗑️</button>
+          <button class="btn-save" id="builderSave">Guardar</button>
+        </div>
       </div>
     </div>
   </section>

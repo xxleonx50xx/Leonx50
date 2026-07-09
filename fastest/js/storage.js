@@ -3,6 +3,8 @@ const KEY = "fastest_state_v1";
 
 export const DEFAULT_STATE = () => ({
   onboarded: false,
+  signedIn: false,
+  account: null,       // { method: 'apple'|'guest', name }
   tutorialDone: false,
   fp: 0,               // Fastest Points (moneda)
   xp: 0,               // experiencia hacia el siguiente nivel
@@ -28,6 +30,8 @@ export const DEFAULT_STATE = () => ({
   lastRewardDay: null, // premio diario reclamado
   perks: {},           // skills compradas { perkId: nivel }
   sfxOn: true,
+  circuits: [],        // circuitos creados/importados
+  activeChallenge: null, // reto recibido por link pendiente
   zonas: [],
   drives: [],
   dailyChallenge: null,
