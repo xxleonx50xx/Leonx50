@@ -3,10 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#05060f" />
+  <meta name="theme-color" content="#0a0a0c" />
   <title>Fastest</title>
 
-  <!-- PWA / iOS -->
   <link rel="manifest" href="./manifest.webmanifest" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -14,133 +13,166 @@
   <link rel="apple-touch-icon" href="./icons/icon-180.png" />
   <link rel="icon" type="image/png" href="./icons/icon-192.png" />
 
-  <!-- Fuentes racing (con fallback del sistema si no hay red) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
-
-  <!-- Mapa (Leaflet) -->
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
   <link rel="stylesheet" href="./css/styles.css" />
 </head>
 <body>
-  <!-- ================= PANTALLA DE BIENVENIDA / AVISO ================= -->
-  <div id="onboarding" class="onboarding hidden">
-    <div class="onboarding-card glass">
-      <div class="logo-big">FASTEST</div>
+  <!-- ============ ONBOARDING ============ -->
+  <div id="onboarding" class="overlay hidden">
+    <div class="onb-card">
+      <div class="brand-mark xl"><span class="bm-a">FAST</span><span class="bm-b">EST</span><i class="bm-slash"></i></div>
       <p class="tagline">Tu ciudad es la pista.</p>
       <ul class="onb-list">
-        <li>🏁 Detecta cuando arrancas y mide tu velocidad en tiempo real.</li>
-        <li>🗺️ Traza tu ruta y la divide en rectas y curvas.</li>
-        <li>⭐ Gana estrellas, sube de nivel y desbloquea recompensas.</li>
-        <li>🎡 Gira la ruleta cada 10 manejos.</li>
+        <li><b>🗺️ Desbloquea el mapa</b> conforme recorres tu ciudad.</li>
+        <li><b>⚡ Mide tu velocidad</b> en cada recta y curva.</li>
+        <li><b>🏆 Sube de rango</b> y compite en el Ranking.</li>
       </ul>
-      <div class="safety-note">
-        <strong>Maneja con responsabilidad.</strong> Fastest premia la constancia y la línea limpia, no solo la velocidad. Respeta siempre los límites y las leyes de tránsito. Coloca el teléfono en un soporte; nunca lo uses manejando.
-      </div>
-      <button id="onbAccept" class="btn-primary">Empezar</button>
+      <div class="safety-note"><b>Maneja responsable.</b> Fastest premia la constancia y la línea limpia, no solo la velocidad. Respeta los límites y las leyes de tránsito. Usa un soporte; nunca manipules el teléfono conduciendo.</div>
+      <button id="onbAccept" class="btn-primary">Comenzar</button>
     </div>
   </div>
 
-  <!-- ================= HUD DE MANEJO (pantalla principal) ================= -->
-  <section id="screen-drive" class="screen active">
+  <!-- ============ TAB: CONDUCIR ============ -->
+  <section id="tab-drive" class="tabview active">
     <div id="map"></div>
-
-    <div class="hud-overlay">
-      <div class="hud-top glass-soft">
-        <div class="player-chip">
-          <span class="rank-badge" id="hudRank">Novato</span>
-          <div class="lvl-wrap">
-            <div class="lvl-line"><span id="hudLevel">Nv 1</span><span id="hudFp">0 FP</span></div>
-            <div class="xp-bar"><div class="xp-fill" id="hudXp"></div></div>
+    <div class="hud">
+      <div class="hud-top">
+        <div class="chip glass">
+          <div class="chip-rank" id="hudRank">Novato</div>
+          <div class="chip-xp">
+            <div class="chip-line"><span id="hudLevel">Nv 1</span><span id="hudFp">0 FP</span></div>
+            <div class="xpbar"><i id="hudXp"></i></div>
           </div>
         </div>
-        <button class="icon-btn" id="btnGarage" aria-label="Garage">🏆</button>
+        <div class="explore-chip glass" id="exploreChip">🗺️ <b id="exploreP">0%</b></div>
       </div>
 
       <div class="speedo-wrap">
         <div class="speedo">
           <svg viewBox="0 0 220 220" class="speedo-svg">
-            <circle class="speedo-track" cx="110" cy="110" r="94" />
-            <circle class="speedo-arc" id="speedoArc" cx="110" cy="110" r="94" />
+            <circle class="s-track" cx="110" cy="110" r="94" />
+            <circle class="s-arc" id="speedoArc" cx="110" cy="110" r="94" />
           </svg>
-          <div class="speedo-center">
-            <div class="speed-value" id="speedValue">0</div>
-            <div class="speed-unit">km/h</div>
+          <div class="speedo-c">
+            <div class="s-val" id="speedValue">0</div>
+            <div class="s-unit">km/h</div>
           </div>
         </div>
-        <div class="combo-badge hidden" id="comboBadge">COMBO x1</div>
+        <div class="combo hidden" id="comboBadge">COMBO x1</div>
       </div>
 
-      <div class="live-stats glass-soft">
-        <div class="stat"><span class="stat-num" id="statDist">0.0</span><span class="stat-lbl">km</span></div>
-        <div class="stat"><span class="stat-num" id="statAvg">0</span><span class="stat-lbl">prom km/h</span></div>
-        <div class="stat"><span class="stat-num" id="statMax">0</span><span class="stat-lbl">máx km/h</span></div>
-        <div class="stat"><span class="stat-num" id="statTime">0:00</span><span class="stat-lbl">tiempo</span></div>
+      <div class="live glass">
+        <div class="lv"><b id="statDist">0.0</b><span>km</span></div>
+        <div class="lv"><b id="statAvg">0</b><span>prom</span></div>
+        <div class="lv"><b id="statMax">0</b><span>máx</span></div>
+        <div class="lv"><b id="statTime">0:00</b><span>tiempo</span></div>
       </div>
 
       <div class="hud-bottom">
-        <div class="status-pill" id="statusPill">Toca ▶ y ponte en marcha</div>
-        <button id="btnDrive" class="btn-drive">▶</button>
+        <div class="status" id="statusPill">Toca para arrancar</div>
+        <button id="btnDrive" class="drive-btn"><span>▶</span></button>
       </div>
     </div>
-
-    <div class="toast-stack" id="toastStack"></div>
+    <div class="toasts" id="toastStack"></div>
   </section>
 
-  <!-- ================= RESUMEN DEL MANEJO ================= -->
-  <section id="screen-summary" class="screen">
+  <!-- ============ TAB: RANKING ============ -->
+  <section id="tab-rank" class="tabview">
+    <div class="page">
+      <div class="page-head"><h2>Ranking</h2><button class="btn-invite" id="btnInvite">＋ Invitar</button></div>
+      <div class="seg-control" id="rankTabs"></div>
+      <div id="rankBody" class="page-body"></div>
+    </div>
+  </section>
+
+  <!-- ============ TAB: GARAGE / PERFIL ============ -->
+  <section id="tab-garage" class="tabview">
+    <div class="page">
+      <div class="page-head"><h2>Garage</h2><button class="icon-btn" id="btnEditProfile">✎</button></div>
+      <div class="seg-control" id="garageTabs">
+        <button class="seg active" data-tab="perfil">Perfil</button>
+        <button class="seg" data-tab="medallas">Medallas</button>
+        <button class="seg" data-tab="spots">Spots</button>
+        <button class="seg" data-tab="premios">Premios</button>
+        <button class="seg" data-tab="zonas">Zonas</button>
+        <button class="seg" data-tab="historial">Historial</button>
+      </div>
+      <div id="garageBody" class="page-body"></div>
+    </div>
+  </section>
+
+  <!-- ============ MENÚ INFERIOR FIJO ============ -->
+  <nav class="tabbar glass" id="tabbar">
+    <button class="tabbtn active" data-go="drive">
+      <svg viewBox="0 0 24 24" class="ti"><path d="M12 3a9 9 0 0 0-9 9 9 9 0 0 0 1.5 5h15A9 9 0 0 0 21 12a9 9 0 0 0-9-9Z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 12l4-3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <span>Conducir</span>
+    </button>
+    <button class="tabbtn" data-go="rank">
+      <svg viewBox="0 0 24 24" class="ti"><path d="M6 20V10M12 20V4M18 20v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <span>Ranking</span>
+    </button>
+    <button class="tabbtn" data-go="garage">
+      <svg viewBox="0 0 24 24" class="ti"><path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11v6h-2v-2H7v2H5v-6Z" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="14" r="1.1" fill="currentColor"/><circle cx="16" cy="14" r="1.1" fill="currentColor"/></svg>
+      <span>Garage</span>
+    </button>
+  </nav>
+
+  <!-- ============ OVERLAY: RESUMEN ============ -->
+  <section id="ov-summary" class="sheet-ov hidden">
     <div class="sheet">
-      <div class="sheet-head">
-        <button class="icon-btn" data-nav="drive">✕</button>
-        <h2>Resumen del manejo</h2>
-        <span></span>
-      </div>
-      <div id="summaryBody" class="sheet-body"></div>
+      <div class="sheet-head"><button class="icon-btn" data-close="summary">✕</button><h2>Resumen</h2><span></span></div>
+      <div id="summaryBody" class="page-body"></div>
     </div>
   </section>
 
-  <!-- ================= GARAGE / PERFIL ================= -->
-  <section id="screen-garage" class="screen">
-    <div class="sheet">
-      <div class="sheet-head">
-        <button class="icon-btn" data-nav="drive">✕</button>
-        <h2>Garage</h2>
-        <span></span>
-      </div>
-      <div class="tabs">
-        <button class="tab active" data-tab="perfil">Perfil</button>
-        <button class="tab" data-tab="zonas">Zonas</button>
-        <button class="tab" data-tab="premios">Premios</button>
-        <button class="tab" data-tab="historial">Historial</button>
-      </div>
-      <div id="garageBody" class="sheet-body"></div>
-    </div>
-  </section>
-
-  <!-- ================= RULETA ================= -->
-  <section id="screen-wheel" class="screen">
+  <!-- ============ OVERLAY: RULETA ============ -->
+  <section id="ov-wheel" class="sheet-ov hidden">
     <div class="wheel-scene">
-      <button class="icon-btn wheel-close" data-nav="drive">✕</button>
+      <button class="icon-btn wheel-x" data-close="wheel">✕</button>
       <h2 class="wheel-title">La Ruleta</h2>
-      <p class="wheel-sub" id="wheelSub">Gira y prueba tu suerte</p>
-      <div class="wheel-holder">
-        <div class="wheel-pointer">▼</div>
-        <canvas id="wheelCanvas" width="320" height="320"></canvas>
-      </div>
+      <p class="wheel-sub" id="wheelSub">Prueba tu suerte</p>
+      <div class="wheel-holder"><div class="wheel-ptr">▼</div><canvas id="wheelCanvas" width="320" height="320"></canvas></div>
       <button id="btnSpin" class="btn-primary">GIRAR</button>
       <div id="wheelResult" class="wheel-result"></div>
     </div>
   </section>
 
-  <!-- Modal de recompensa (level up / desbloqueo) -->
-  <div id="rewardModal" class="reward-modal hidden">
-    <div class="reward-card glass">
+  <!-- ============ OVERLAY: EDITAR PERFIL ============ -->
+  <section id="ov-profile" class="sheet-ov hidden">
+    <div class="sheet">
+      <div class="sheet-head"><button class="icon-btn" data-close="profile">✕</button><h2>Tu perfil</h2><button class="btn-save" id="profileSave">Guardar</button></div>
+      <div class="page-body">
+        <div class="photo-pick">
+          <div class="photo-frame" id="photoFrame"><span id="photoPlus">＋<br><small>Foto del carro</small></span></div>
+          <input type="file" id="photoInput" accept="image/*" hidden />
+        </div>
+        <label class="fld"><span>Nombre de piloto</span><input id="fDriver" maxlength="20" placeholder="Ej. Leon" /></label>
+        <label class="fld"><span>Apodo del carro</span><input id="fCarName" maxlength="24" placeholder="Ej. El Fantasma" /></label>
+        <div class="fld-row">
+          <label class="fld"><span>Marca</span><input id="fBrand" maxlength="20" placeholder="Nissan" /></label>
+          <label class="fld"><span>Modelo</span><input id="fModel" maxlength="20" placeholder="Skyline R34" /></label>
+        </div>
+        <label class="fld"><span>Placa (opcional)</span><input id="fPlate" maxlength="12" placeholder="SIN-0000" /></label>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ OVERLAY: TUTORIAL ============ -->
+  <div id="ov-tutorial" class="tut hidden">
+    <div class="tut-caption glass" id="tutCaption"></div>
+    <div class="tut-skip"><button id="tutSkip" class="btn-ghost sm">Saltar tutorial</button></div>
+  </div>
+
+  <!-- reward modal -->
+  <div id="rewardModal" class="overlay hidden">
+    <div class="reward-card">
       <div class="reward-emoji" id="rewardEmoji">🎉</div>
       <div class="reward-title" id="rewardTitle"></div>
       <div class="reward-desc" id="rewardDesc"></div>
-      <button class="btn-primary" id="rewardClose">¡Genial!</button>
+      <button class="btn-primary" id="rewardClose">¡Vamos!</button>
     </div>
   </div>
 

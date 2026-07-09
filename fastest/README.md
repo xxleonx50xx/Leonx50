@@ -1,92 +1,87 @@
 # 🏁 Fastest
 
-Tu ciudad es la pista. **Fastest** mide tu velocidad promedio en las rectas y curvas de tu ciudad mientras manejas, divide tu ruta en tramos, y te premia con estrellas, niveles y recompensas estilo videojuego (inspirado en Forza Horizon).
+Tu ciudad es la pista. **Fastest** mide tu velocidad mientras manejas, **desbloquea el mapa** de tu ciudad conforme lo recorres (estilo *fog of war*), divide tu ruta en rectas y curvas, y te premia con un sistema de videojuego: FP, niveles, medallas, spots, ruleta y ranking.
 
 Es una **PWA (Progressive Web App)**: se instala directo en tu iPhone desde Safari, sin App Store y sin Mac. Se edita 100% desde la web.
 
 ---
 
-## 📲 Cómo instalarla en tu iPhone
+## 📲 Instalar en iPhone
+1. Publica la carpeta `fastest/` (ver **Deploy**) → obtienes una URL `https://…`.
+2. Abre esa URL en **Safari** → botón **Compartir** → **Agregar a inicio**.
+3. Ábrela desde el ícono ⚡, y da permiso de **Ubicación** → *Al usar la app*.
 
-1. Publica la carpeta `fastest/` (ver **Deploy** abajo) — obtendrás una URL `https://…`.
-2. Abre esa URL en **Safari** (tiene que ser Safari, no Chrome).
-3. Toca el botón **Compartir** → **Agregar a pantalla de inicio**.
-4. Ábrela desde el ícono ⚡ que aparece. Ya corre a pantalla completa como app nativa.
-5. La primera vez te pedirá permiso de **Ubicación** → elige **"Al usar la app" / Permitir**.
-
-> ⚠️ **Requiere HTTPS.** El GPS del navegador solo funciona en sitios seguros (`https://`). GitHub Pages ya da HTTPS gratis.
+> ⚠️ Requiere **HTTPS** (para el GPS). GitHub Pages lo da gratis. Mantén la pantalla encendida al manejar (iOS apaga el GPS de PWAs con la pantalla apagada).
 
 ---
 
-## 🚀 Deploy (GitHub Pages, gratis)
+## 🚀 Deploy (GitHub Pages)
+Incluye un workflow que publica `fastest/` automáticamente.
+1. GitHub → **Settings → Pages → Source: GitHub Actions**.
+2. Haz push → se publica en `https://<usuario>.github.io/<repo>/`.
 
-Este repo incluye un workflow que publica automáticamente la carpeta `fastest/`.
-
-1. En GitHub: **Settings → Pages → Source: GitHub Actions**.
-2. Haz push a la rama principal. El workflow `.github/workflows/deploy-fastest.yml` publica el sitio.
-3. Tu URL será algo como: `https://<usuario>.github.io/<repo>/`
-
-**Probar localmente** (en tu compu):
-```bash
-cd fastest
-python3 -m http.server 8080
-# abre http://localhost:8080
-```
-(En escritorio el GPS puede ser aproximado; la velocidad real se ve en el teléfono moviéndote.)
+Local: `cd fastest && python3 -m http.server 8080`
 
 ---
 
 ## 🎮 Cómo funciona
+- **Detección automática:** toca ▶, ponte en marcha; al pasar **10 km/h** registra solo.
+- **Velocímetro en vivo** + traza tu ruta. El carro se muestra como un **Skyline R34 lateral**.
+- **Niebla de guerra 🗺️:** el mapa empieza gris y se **revela** por donde pasas. Un contador muestra tu % explorado.
+- **Tramos automáticos:** rectas y curvas, cada una con **estrellas ⭐**
+  - Rectas → por velocidad vs. objetivo. Curvas → por **línea limpia** (constancia).
+- **Zonas guardadas:** guarda una recta/curva con tu objetivo y compite contra ti mismo.
 
-- **Detección automática:** toca ▶, ponte en marcha y al superar **10 km/h** empieza a registrar solo.
-- **Velocímetro en vivo** con arco de color y traza tu ruta en el mapa.
-- **Tramos automáticos:** al terminar, la ruta se divide en **rectas** y **curvas**.
-- **Estrellas ⭐ (1–3):**
-  - *Rectas* → por velocidad promedio vs. el objetivo.
-  - *Curvas* → por **línea limpia** (constancia), no por ir rápido. Más seguro y más satisfactorio.
-- **Zonas guardadas:** convierte cualquier recta/curva en una "Zona" con tu propio objetivo. Cada vez que vuelvas a pasar, mejora tu marca y compite contra ti mismo.
-
-## 🏆 Sistema de recompensas "Velocidad Total"
-
+## 🏆 Recompensas
 | Elemento | Qué hace |
 |---|---|
-| **FP (Fastest Points)** | Moneda: ganas por km, estrellas, velocidad punta y récords. |
-| **Niveles y XP** | Barra de experiencia; subir de nivel desbloquea temas. |
-| **Rangos** | Novato → Veloz → Piloto → As → Leyenda → **Fastest**. |
-| **Combo** | Mantén velocidad y sube el multiplicador (x1–x5). |
-| **Racha diaria 🔥** | Días seguidos manejando. |
-| **Desafío diario** | Reto que cambia cada día (+FP al completarlo). |
-| **Temas neón** | 8 skins que cambian el color del HUD, se desbloquean por logros. |
-| **🎡 La Ruleta** | Cada **10 manejos** ganas un giro con premios de distinta rareza (común → legendario, incluye JACKPOT). |
+| **FP** | Moneda: por km, estrellas, combo, velocidad y récords. |
+| **Niveles / Rangos** | Novato → Veloz → Piloto → As → Leyenda → **Fastest**. |
+| **Medallas** 🎖️ | 16 logros al estilo arcade (Ronda 10, Sin Piedad, Cartógrafo…). |
+| **Spots** 📸 | Lugares icónicos de Culiacán (La Lomita, Catedral, Las Riberas…). Súbeles foto y gana FP. |
+| **Skills** 🧲 | Mejoras que compras con FP (Imán de FP, Turbo XP, Combo Rápido, Radar). |
+| **Cofre diario** 🎁 | Recompensa sorpresa cada día. |
+| **Desafío diario** | Reto que cambia a diario. |
+| **La Ruleta** 🎡 | Cada 10 manejos, giro con premios (común → JACKPOT legendario). |
+| **Sonidos** 🔊 | Efectos sintetizados tipo arcade al subir de nivel, medallas y monedas. |
+| **Ranking** | Top Speed, Tiempo, Distancia y Promedio (contra rivales locales por ahora). |
+| **Perfil** | Nombre de piloto, marca, modelo, placa y **foto de tu carro**. |
+
+## 🧭 Estructura (UI)
+Menú inferior fijo con 3 secciones:
+- **Conducir** — mapa + HUD + niebla + spots.
+- **Ranking** — tablas por categoría + invitar amigos.
+- **Garage** — Perfil · Medallas · Spots · Premios · Zonas · Historial.
+
+Además, un **tutorial** simulado (Cañadas → La Primavera) corre la primera vez para enseñar la app.
 
 ---
 
-## 🗂️ Estructura
-
+## 🗂️ Archivos
 ```
 fastest/
-├── index.html          # estructura y pantallas
-├── manifest.webmanifest# metadatos PWA
-├── sw.js               # service worker (instalable/offline shell)
-├── css/styles.css      # tema Forza (neón + glassmorphism)
-├── icons/              # íconos de la app
+├── index.html · manifest.webmanifest · sw.js
+├── css/styles.css            # tema negro/rojo metálico + glass
+├── icons/                    # ícono (chevrones rojos)
 └── js/
-    ├── app.js          # controlador principal (HUD, recompensas, garage, ruleta)
-    ├── tracker.js      # GPS + cálculo de velocidad
-    ├── analysis.js     # división en rectas/curvas + estrellas
-    ├── rewards.js      # niveles, rangos, temas, ruleta, desafíos
-    ├── map.js          # mapa (Leaflet + OpenStreetMap)
-    └── storage.js      # guardado local
+    ├── app.js                # controlador principal
+    ├── tracker.js            # GPS + velocidad
+    ├── analysis.js           # rectas/curvas + estrellas
+    ├── rewards.js            # niveles, temas, ruleta, skills, cofre
+    ├── fog.js                # niebla de guerra
+    ├── map.js                # mapa Leaflet + carro R34
+    ├── tutorial.js           # recorrido de práctica
+    ├── spots.js              # spots de la ciudad
+    ├── achievements.js       # medallas
+    ├── leaderboard.js        # ranking (rivales)
+    ├── sfx.js                # sonidos sintetizados
+    └── storage.js            # guardado local
 ```
 
----
+## 🔜 Próximo (roadmap)
+- **Constructor de circuitos** (inicio → fin con waypoints) y **retos a amigos** por tiempo.
+- **Ranking online real** entre amigos → requiere backend (p. ej. Supabase, capa gratis).
+- Más ciudades y spots creados por el usuario.
 
-## 🔒 Nota de seguridad
-
-Fastest premia la **constancia y la línea limpia**, no manejar peligrosamente. Respeta siempre los límites y las leyes de tránsito. Usa un soporte para el teléfono; **nunca** lo manipules manejando.
-
-## 🧭 Limitaciones conocidas (v1)
-
-- iOS **suspende el GPS con la pantalla apagada** en PWAs. Mantén la pantalla encendida durante el manejo (idealmente con el teléfono en un soporte y cargando).
-- Las notificaciones push (como las del ejemplo) requieren un backend; van en una versión futura.
-- Los mapas usan tiles gratuitos de OpenStreetMap/CARTO (requieren internet).
+## 🔒 Seguridad
+Fastest premia la **constancia y la línea limpia**, no manejar peligrosamente. Respeta límites y leyes de tránsito. Usa un soporte; **nunca** manipules el teléfono manejando.

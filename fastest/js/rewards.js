@@ -20,16 +20,16 @@ export function rankFor(level) {
   return r.name;
 }
 
-// --- Temas / recompensas desbloqueables (cambian el color neón del HUD) ---
+// --- Temas / recompensas desbloqueables (cambian el color de acento) ---
 export const THEMES = [
-  { id: "aqua",    name: "Aqua Neón",   emoji: "🌊", accent: "#16f2c4", accent2: "#2d7bff", req: { type: "start" },       reqText: "Inicial" },
-  { id: "magma",   name: "Magma",       emoji: "🔥", accent: "#ff6a3d", accent2: "#ff2d6d", req: { type: "level", v: 3 }, reqText: "Nivel 3" },
-  { id: "toxic",   name: "Tóxico",      emoji: "☢️", accent: "#c6ff33", accent2: "#37d67a", req: { type: "level", v: 6 }, reqText: "Nivel 6" },
-  { id: "violet",  name: "Ultravioleta",emoji: "🔮", accent: "#b06bff", accent2: "#5a8bff", req: { type: "level", v: 10 },reqText: "Nivel 10" },
-  { id: "gold",    name: "Oro Puro",    emoji: "🏆", accent: "#ffcf3f", accent2: "#ff9d3f", req: { type: "level", v: 15 },reqText: "Nivel 15" },
-  { id: "ice",     name: "Hielo",       emoji: "❄️", accent: "#8fe9ff", accent2: "#5f8bff", req: { type: "stars", v: 30 },reqText: "30 estrellas ⭐" },
-  { id: "crimson", name: "Carmesí",     emoji: "🩸", accent: "#ff3355", accent2: "#b3003a", req: { type: "top", v: 140 }, reqText: "140 km/h de récord" },
-  { id: "mono",    name: "Fantasma",    emoji: "👻", accent: "#e8f0ff", accent2: "#9fb4d8", req: { type: "drives", v: 25 },reqText: "25 manejos" },
+  { id: "rojo",    name: "Rojo GT",     emoji: "🔴", accent: "#ff2e3f", accent2: "#c81422", req: { type: "start" },       reqText: "Inicial" },
+  { id: "carbon",  name: "Carbón",      emoji: "⚫", accent: "#c9ced6", accent2: "#6b7280", req: { type: "level", v: 3 }, reqText: "Nivel 3" },
+  { id: "nardo",   name: "Nardo",       emoji: "🩶", accent: "#b8bcc2", accent2: "#7d828b", req: { type: "level", v: 6 }, reqText: "Nivel 6" },
+  { id: "cobre",   name: "Cobre",       emoji: "🟠", accent: "#ff7a3d", accent2: "#c14a12", req: { type: "level", v: 10 },reqText: "Nivel 10" },
+  { id: "oro",     name: "Oro Molido",  emoji: "🟡", accent: "#f5c542", accent2: "#b8860b", req: { type: "level", v: 15 },reqText: "Nivel 15" },
+  { id: "midnight",name: "Medianoche",  emoji: "🔵", accent: "#4f8bff", accent2: "#1c3faa", req: { type: "stars", v: 30 },reqText: "30 estrellas ⭐" },
+  { id: "veneno",  name: "Veneno",      emoji: "🟢", accent: "#59e07a", accent2: "#1f9d4d", req: { type: "top", v: 140 }, reqText: "140 km/h de récord" },
+  { id: "morado",  name: "Amatista",    emoji: "🟣", accent: "#b06bff", accent2: "#6a2fc0", req: { type: "drives", v: 25 },reqText: "25 manejos" },
 ];
 export function themeById(id) { return THEMES.find(t => t.id === id) || THEMES[0]; }
 
@@ -86,15 +86,40 @@ export function rollDailyChallenge(dayKey) {
 }
 function hashStr(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h; }
 
-// --- FP y XP ganados por un manejo ---
-export function computeDriveRewards(drive) {
+// --- Skills / Perks (se compran con FP) ---
+export const PERKS = [
+  { id: "fp_boost",   name: "Imán de FP",     emoji: "🧲", max: 4, per: 0.08, baseCost: 800,  desc: "+8% FP por nivel" },
+  { id: "xp_boost",   name: "Turbo XP",       emoji: "⚡", max: 4, per: 0.08, baseCost: 900,  desc: "+8% XP por nivel" },
+  { id: "combo_fast", name: "Combo Rápido",   emoji: "🔗", max: 3, per: 1,    baseCost: 700,  desc: "El combo sube más rápido" },
+  { id: "radar",      name: "Radar",          emoji: "📡", max: 3, per: 1,    baseCost: 600,  desc: "Revela más mapa al pasar" },
+];
+export function perkLevel(state, id) { return (state.perks && state.perks[id]) || 0; }
+export function perkCost(perk, level) { return Math.round(perk.baseCost * Math.pow(1.8, level)); }
+export function perkMultiplier(state, id) {
+  const perk = PERKS.find(p => p.id === id); if (!perk) return 1;
+  return 1 + perkLevel(state, id) * perk.per;
+}
+
+// --- Premio diario (cofre) ---
+export function dailyReward(dayKey) {
+  const h = Math.abs(hashStr("chest" + dayKey));
+  const fp = 150 + (h % 8) * 50;         // 150..500
+  const spin = (h % 4 === 0);            // 1 de cada 4 días da giro
+  return { fp, spin };
+}
+
+// --- FP y XP ganados por un manejo (aplica perks) ---
+export function computeDriveRewards(drive, state) {
   const stars = drive.segments.reduce((s, x) => s + x.stars, 0);
   let fp = 0;
-  fp += Math.round(drive.distanceKm * 40);        // 40 FP por km
-  fp += stars * 60;                                // 60 FP por estrella
-  fp += Math.round(drive.maxSpeed * 2);            // bono por velocidad punta
-  fp += (drive.newRecords || 0) * 250;             // récords personales
-  fp = Math.round(fp * (drive.wheelXpBoost || 1)); // por si hay x2 activo (no usado aún)
-  const xp = Math.round(fp * 0.6) + stars * 20;
+  fp += Math.round(drive.distanceKm * 40);
+  fp += stars * 60;
+  fp += Math.round(drive.maxSpeed * 2);
+  fp += (drive.newRecords || 0) * 250;
+  fp += (drive.maxCombo || 1) * 40;
+  const fpMul = state ? perkMultiplier(state, "fp_boost") : 1;
+  const xpMul = state ? perkMultiplier(state, "xp_boost") : 1;
+  fp = Math.round(fp * fpMul);
+  const xp = Math.round((fp * 0.6 + stars * 20) * xpMul);
   return { fp, xp, stars };
 }
