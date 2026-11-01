@@ -1,4 +1,4 @@
-name: Deploy Fastest (PWA) to GitHub Pages
+name: Deploy Fastest + Cuadra (PWAs) to GitHub Pages
 
 on:
   push:
@@ -23,9 +23,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
-      - name: Upload fastest/ as the site
+      # Fastest queda en la raíz del sitio (misma URL de siempre)
+      # y Cuadra se publica en /cuadra/
+      - name: Build site
+        run: |
+          mkdir -p _site
+          cp -r fastest/. _site/
+          mkdir -p _site/cuadra
+          cp -r cuadra/. _site/cuadra/
+          rm -f _site/icons/gen-icons.mjs _site/cuadra/icons/gen-icons.mjs
+      - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./fastest
+          path: ./_site
       - id: deployment
         uses: actions/deploy-pages@v4
