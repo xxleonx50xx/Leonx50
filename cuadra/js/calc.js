@@ -367,7 +367,7 @@ export function merchantKey(t, brandFor) {
 }
 
 /** Promedios de los últimos `n` meses completos (más el mes en curso como referencia). */
-export function analysis(S, n, brandFor) {
+export function analysis(S, n, brandFor, { noExtra = false } = {}) {
   const cur = monthKey(today());
   const months = [];
   for (let i = n; i >= 1; i--) months.push(monthKey(addMonths(`${cur}-01`, -i)));
@@ -375,7 +375,7 @@ export function analysis(S, n, brandFor) {
   const fundId = S.settings.fund.accountId;
   const byMonth = Object.fromEntries([...months, cur].map((m) => [m, { spend: 0, mine: 0, work: 0, income: 0 }]));
   const mer = {}, cat = {}, card = {};
-  let spend = 0, mine = 0, others = 0, work = 0, income = 0, subsSeen = 0, count = 0;
+  let spend = 0, mine = 0, others = 0, work = 0, income = 0, subsSeen = 0, count = 0, extras = 0;
   const addSpend = (t, m, amount, myPart, accountId, catId, key) => {
     byMonth[m].spend += amount; byMonth[m].mine += myPart;
     if (!set.has(m)) return;
@@ -391,6 +391,7 @@ export function analysis(S, n, brandFor) {
   for (const t of S.tx) {
     const m = monthKey(t.date);
     if (!byMonth[m]) continue;
+    if (t.type === "expense" && noExtra && t.extra) { if (set.has(m)) extras += Number(t.amount); continue; }
     if (t.type === "expense" && !(t.accountId === fundId && !t.hist)) {
       const sh = (t.shares || []).reduce((q, x) => q + Number(x.amount || 0), 0);
       addSpend(t, m, Number(t.amount), Number(t.amount) - sh, t.accountId, t.categoryId, merchantKey(t, brandFor));
@@ -416,7 +417,7 @@ export function analysis(S, n, brandFor) {
   const workMonths = months.map((m) => byMonth[m].work).sort((a, b) => a - b);
   const median = workMonths.length ? (workMonths[Math.floor((workMonths.length - 1) / 2)] + workMonths[Math.ceil((workMonths.length - 1) / 2)]) / 2 : 0;
   return {
-    months, cur, byMonth, count,
+    months, cur, byMonth, count, extras: r2(extras), avgExtras: r2(extras / N),
     spend: r2(spend), avg: r2(spend / N), mine: r2(mine), avgMine: r2(mine / N), avgOthers: r2(others / N),
     work: r2(work), avgWork: r2(work / N), medianWork: r2(median), avgIncome: r2(income / N),
     saving: r2(work / N - mine / N),

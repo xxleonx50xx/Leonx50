@@ -32,7 +32,7 @@ export function quickAdd(mode = "expense", preset = {}) {
   const state = {
     mode, expr: preset.amount ? String(preset.amount) : "", date: preset.date || today(),
     accountId: preset.accountId || null, categoryId: preset.categoryId || null,
-    split: !!preset.split, payer: preset.payer || "me",
+    split: preset.split === "half" ? 50 : preset.split ? Number(S().settings.partnerPct) || 40 : 0, payer: preset.payer || "me",
   };
   const accounts = () => s.accounts.filter((a) => !a.archived && !(state.mode === "house" && a.id === fundId));
   const pickDefaultAccount = () => {
@@ -98,7 +98,7 @@ export function quickAdd(mode = "expense", preset = {}) {
     const myPct = Number(s.settings.fund.myPct) || 0;
     const partnerPct = Number(s.settings.partnerPct) || 0;
     $("#qaOpts").innerHTML = `
-      ${state.mode === "expense" && p ? `<button type="button" class="pill-btn ${state.split ? "on" : ""}" data-split>${icon("users")} Dividir con ${esc(p.name)} ${partnerPct}%</button>` : ""}
+      ${state.mode === "expense" && p ? `<button type="button" class="pill-btn ${state.split ? "on" : ""}" data-split>${icon("users")} ${state.split ? (state.split === 50 ? `50/50 con ${esc(p.name)}` : `${esc(p.name)} paga ${state.split}%`) : `Dividir con ${esc(p.name)}`}</button>` : ""}
       ${state.mode === "house" ? `<span class="qa-note">${state.payer === "fund" ? "Sale del fondo común" : `Tú ${myPct}% · ${esc(p.name)} ${100 - myPct}%`}</span>` : ""}
       <label class="pill-btn date-pill">${icon("calendar")} <span>${fmtDate(state.date)}</span><input type="date" name="qaDate" value="${state.date}"/></label>
       <button type="button" class="pill-btn ghost" data-full>Más opciones</button>`;
@@ -145,8 +145,8 @@ export function quickAdd(mode = "expense", preset = {}) {
       }
     } else {
       if (!state.accountId) return toast("Elige con qué pagaste");
-      const pct = Number(s.settings.partnerPct) || 0;
-      st.upsert("tx", { ...base, type: "expense", amount, accountId: state.accountId, shares: state.split && pid ? [{ personId: pid, pct, amount: round2((amount * pct) / 100) }] : [] });
+      const pct = state.split;
+      st.upsert("tx", { ...base, type: "expense", amount, accountId: state.accountId, shares: pct && pid ? [{ personId: pid, pct, amount: round2((amount * pct) / 100) }] : [] });
     }
     if (state.accountId && state.mode !== "income") s.settings.lastAccountId = state.accountId;
     st.save();
@@ -163,12 +163,12 @@ export function quickAdd(mode = "expense", preset = {}) {
     if (t.dataset.payer) { state.payer = t.dataset.payer; return paint(); }
     if (t.dataset.acc) { state.accountId = t.dataset.acc; return paint(); }
     if (t.dataset.cat) { state.categoryId = state.categoryId === t.dataset.cat ? null : t.dataset.cat; return paint(); }
-    if (t.dataset.split !== undefined) { state.split = !state.split; return paint(); }
+    if (t.dataset.split !== undefined) { const pp = Number(s.settings.partnerPct) || 40; state.split = state.split === 0 ? pp : state.split === pp && pp !== 50 ? 50 : 0; return paint(); }
     if (t.dataset.more !== undefined) { closeSheet(true); return openFull("menu"); }
     if (t.dataset.full !== undefined) {
       const amount = parseAmount(state.expr);
       closeSheet(true);
-      return openFull(state.mode, { amount: Number.isFinite(amount) ? amount : "", concept: form.elements.concept.value, accountId: state.accountId, categoryId: state.categoryId, date: state.date, split: state.split ? "partner" : undefined, house: state.mode === "house", payer: state.payer });
+      return openFull(state.mode, { amount: Number.isFinite(amount) ? amount : "", concept: form.elements.concept.value, accountId: state.accountId, categoryId: state.categoryId, date: state.date, split: state.split === 50 ? "half" : state.split ? "partner" : undefined, house: state.mode === "house", payer: state.payer });
     }
   });
   form.addEventListener("change", (e) => { if (e.target.name === "qaDate") { state.date = e.target.value || today(); paint(); } });

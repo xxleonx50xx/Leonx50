@@ -135,6 +135,7 @@ export function expenseForm(t = null, preset = {}) {
           ${field("Primera mensualidad", dateInput("firstDate", ""), "Vacío = en el siguiente corte de la tarjeta.")}
         </div>
       </div>` : ""}
+      ${toggle("extra", "Gasto extraordinario", !!v.extra, "Viaje grande, boda, reparación… no cuenta en tu promedio")}
       ${field("Nota", textInput("note", v.note, "Opcional"))}`,
     extraButtons: t ? [{ label: "Eliminar", cls: "danger", onClick: () => delTx(t) }] : [],
     onMount: (form) => {
@@ -161,7 +162,7 @@ export function expenseForm(t = null, preset = {}) {
       const shares = readSplit(fd);
       if (shares === null) return toast("Elige la persona"), false;
       s.settings.lastAccountId = accountId;
-      const base = { concept: fd.get("concept").trim(), categoryId: fd.get("categoryId") || "", date: fd.get("date") || today(), note: fd.get("note").trim(), house: !!fd.get("house") || accountId === s.settings.fund.accountId };
+      const base = { concept: fd.get("concept").trim(), categoryId: fd.get("categoryId") || "", date: fd.get("date") || today(), note: fd.get("note").trim(), house: !!fd.get("house") || accountId === s.settings.fund.accountId, extra: !!fd.get("extra") };
       if (fd.get("isMsi") && st.account(accountId)?.type === "credit") {
         const acc = st.account(accountId);
         const m = {

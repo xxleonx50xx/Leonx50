@@ -195,6 +195,7 @@ const actions = {
   newSub: () => F.subForm(),
   editSub: (d) => F.subForm(st.byId("subs", d.id)),
   anMonths: (d) => { ui.anMonths = Number(d.n); render(); },
+  anExtra: () => { ui.anExtra = ui.anExtra === false; render(); },
   newCat: (d) => F.categoryForm(null, d.kind),
   editCat: (d) => F.categoryForm(st.category(d.id)),
   month: (d) => { ui.month = shiftMonth(ui.month, Number(d.d)); render(); },

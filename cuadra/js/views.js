@@ -79,6 +79,7 @@ function txAmount(t, accountId) {
 function splitBadge(t) {
   const out = [];
   if (t.hist) out.push(`<span class="tag">histórico</span>`);
+  if (t.extra) out.push(`<span class="tag extra">extraordinario</span>`);
   if (isHouse(S(), t)) out.push(`<span class="tag house">${icon("house")}Casa</span>`);
   for (const x of t.shares || []) if (x.amount) out.push(`<span class="tag">${esc(pName(x.personId))} ${money0(x.amount)}</span>`);
   if (t.type === "debt" && t.dir === "iOwe" && t.total) out.push(`<span class="tag">tu parte ${money0(t.amount)}</span>`);
@@ -824,10 +825,12 @@ export function settings() {
 // ================= ANÁLISIS =================
 export function analysisView(ui) {
   const s = S();
-  const n = ui.anMonths || 12;
-  const A = analysis(s, n, brandFor);
+  const n = ui.anMonths || 6;
+  const noExtra = ui.anExtra !== false;
+  const A = analysis(s, n, brandFor, { noExtra });
   const p = st.partner();
-  const per = `<div class="tabs">${[3, 6, 12].map((k) => `<a href="#/analisis" data-act="anMonths" data-n="${k}" class="${n === k ? "on" : ""}">${k} meses</a>`).join("")}</div>`;
+  const per = `<div class="tabs">${[3, 6, 12].map((k) => `<a href="#/analisis" data-act="anMonths" data-n="${k}" class="${n === k ? "on" : ""}">${k} meses</a>`).join("")}</div>
+    <button class="toggle-row" data-act="anExtra"><span>Sin gastos extraordinarios <small>(viajes grandes, boda, reparaciones)</small></span><span class="sw-mini ${noExtra ? "on" : ""}"></span></button>`;
   if (!A.count) return { title: "Análisis", back: !ui.desk, html: per + empty("sliders-horizontal", "Sin datos suficientes", "Registra gastos o importa tu historial para ver promedios.") };
   const curM = A.byMonth[A.cur];
   const maxM = Math.max(...[...A.months, A.cur].map((m) => A.byMonth[m].spend), 1);
@@ -838,7 +841,7 @@ export function analysisView(ui) {
   let html = per + `
     <div class="${ui.desk ? "dash" : ""}"><div>
     <div class="hero">
-      <div class="hero-top"><span>Gasto promedio mensual · últimos ${n} meses</span></div>
+      <div class="hero-top"><span>Gasto promedio mensual · últimos ${n} meses${noExtra ? " · sin extraordinarios" : ""}</span></div>
       <div class="big">${money0(A.avg)}</div>
       <div class="hero-row">
         <div><small>Mi parte</small><b>${money0(A.avgMine)}</b></div>
@@ -851,6 +854,7 @@ export function analysisView(ui) {
       ${kv("Ingreso mediano por mes", `${money(A.medianWork)} <small>(la mitad de los meses ganas menos que esto)</small>`)}
       ${kv("Lo que te queda (trabajo − tu parte)", `<span class="${moneyCls(A.saving)}">${money(A.saving)}</span> <small>al mes</small>`)}
       ${kv("Este mes vas", `${money0(curM.spend)} <small>de ${money0(A.avg)} promedio</small>`)}
+      ${noExtra && A.extras ? kv("Extraordinarios (aparte)", `${money0(A.avgExtras)} <small>al mes · ${money0(A.extras)} en ${n} meses</small>`) : ""}
     </div></div><div>
     ${section("Mes a mes", `<div class="card">${chart}</div>`)}
     </div></div>`;
