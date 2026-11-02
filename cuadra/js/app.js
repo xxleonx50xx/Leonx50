@@ -5,6 +5,7 @@ import { today, monthKey, shiftMonth, parseAmount } from "./format.js";
 import { toast, closeSheet, sheetOpen } from "./ui.js";
 import * as V from "./views.js";
 import * as F from "./forms.js";
+import { compute } from "./calc.js";
 import { icon } from "./logos.js";
 import { bindQuick, quickAdd } from "./quick.js";
 import { brandFor } from "./logos.js";
@@ -108,7 +109,7 @@ F.bindRefresh(render);
 function cleanAmount(v) {
   const m = String(v || "").replace(/[^0-9.,-]/g, "");
   // "1.234,50" o "1,234.50" → 1234.50
-  const norm = /,\d{1,2}$/.test(m) && m.includes(".") ? m.replace(/\./g, "").replace(",", ".") : m.replace(/,/g, "");
+  const norm = /,\d{1,2}$/.test(m) ? m.replace(/\./g, "").replace(",", ".") : /^\d{1,3}(\.\d{3})+$/.test(m) ? m.replace(/\./g, "") : m.replace(/,/g, "");
   return parseAmount(norm);
 }
 function accountForCard(name) {
@@ -136,9 +137,10 @@ async function pullInbox() {
   const s = st.state();
   if (!s?.settings.inboxUrl || !s.settings.inboxToken) return;
   try {
-    const r = await fetch(`${s.settings.inboxUrl}?token=${encodeURIComponent(s.settings.inboxToken)}`, { cache: "no-store" });
+    const r = await fetch(`${s.settings.inboxUrl}?token=${encodeURIComponent(s.settings.inboxToken)}&t=${Date.now()}`, { cache: "no-store" });
     const j = await r.json();
-    if (j.items?.length) { s.inbox.push(...j.items); st.save(); render(); toast(`${j.items.length} compra(s) de Apple Pay por registrar`); }
+    const fresh = (j.items || []).filter((it) => it.id && !s.inbox.some((x) => x.id === it.id) && !(s.inboxSeen || []).includes(it.id));
+    if (fresh.length) { s.inbox.push(...fresh); s.inboxSeen = [...(s.inboxSeen || []), ...fresh.map((x) => x.id)].slice(-300); st.save(); render(); toast(`${fresh.length} compra(s) de Apple Pay por registrar`); }
   } catch {}
 }
 function openInboxItem(id) {
@@ -157,12 +159,14 @@ function exportIcs() {
   const stamp = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
   const d0 = today().replace(/-/g, "");
   const ev = [];
-  const add = (uidk, title, rrule, desc, start = d0, hour = 9) => ev.push([
+  const icsEsc = (x) => String(x || "").replace(/[\;,]/g, (c) => "\\" + c).replace(/\n/g, "\\n");
+  const add = (uidk, title0, rrule, desc0, start = d0, hour = 9) => { const title = icsEsc(title0), desc = icsEsc(desc0); ev.push([
     "BEGIN:VEVENT", `UID:cuadra-${uidk}@cuadra`, `DTSTAMP:${stamp}`, `DTSTART:${start}T${pad(hour)}0000`, `DURATION:PT15M`, `SUMMARY:${title}`,
     rrule ? `RRULE:${rrule}` : "", desc ? `DESCRIPTION:${desc}` : "",
     "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${title}`, "TRIGGER:-P1D", "END:VALARM",
-    "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${title}`, "TRIGGER:PT0M", "END:VALARM", "END:VEVENT"].filter(Boolean).join("\r\n"));
-  for (const a of s.accounts.filter((x) => x.type === "credit" && !x.archived && x.dueDay && Math.abs(Number(x.initial) || 0) + 1 > 0))
+    "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${title}`, "TRIGGER:PT0M", "END:VALARM", "END:VEVENT"].filter(Boolean).join("\r\n")); };
+  const Cx = compute(s);
+  for (const a of s.accounts.filter((x) => x.type === "credit" && !x.archived && x.dueDay && (Cx.acc[x.id] < 0 || s.msi.some((m) => m.accountId === x.id && !Cx.msi[m.id].done))))
     add(`pago-${a.id}`, `Pagar ${a.name}`, `FREQ=MONTHLY;BYMONTHDAY=${a.dueDay}`, "Fecha límite de pago (Cuadra)");
   const p = st.partner();
   if (p) {
@@ -173,7 +177,7 @@ function exportIcs() {
     add("corte", `Cerrar corte con ${p.name}`, freq === "monthly" ? "FREQ=MONTHLY" : `FREQ=WEEKLY;INTERVAL=${freq === "biweekly" ? 2 : 1}`, "Abre Cuadra → Cortes", f, 20);
   }
   const renta = (s.settings.fund.budget || []).find((b) => b.categoryId === "c_renta");
-  if (renta) add("renta", `Renta $${renta.amount}`, "FREQ=MONTHLY;BYMONTHDAY=1", "Tú 60% · Liz 40%");
+  if (renta) add("renta", `Renta $${renta.amount}`, "FREQ=MONTHLY;BYMONTHDAY=1", p ? `Tú ${s.settings.fund.myPct}% · ${p.name} ${100 - s.settings.fund.myPct}%` : "");
   for (const x of (s.subs || []).filter((x) => x.active && x.day)) add(`sub-${x.id}`, `Cobro ${x.name} $${x.amount}`, `FREQ=MONTHLY;BYMONTHDAY=${x.day}`, x.accountId ? `Tarjeta: ${st.account(x.accountId)?.name || ""}` : "");
   for (const pp of s.people.filter((x) => x.plan && !x.archived)) {
     const day = Number(pp.plan.start.slice(8, 10));
@@ -323,6 +327,7 @@ const actions = {
     if (!confirm("¿Borrar TODOS los datos de este teléfono? No se puede deshacer.")) return;
     if (prompt('Escribe BORRAR para confirmar') !== "BORRAR") return;
     st.wipe();
+    $("#wName").value = ""; $("#wPartner").value = "";
     location.hash = "";
     render();
   },
@@ -346,7 +351,7 @@ document.addEventListener("change", (e) => {
     const s = st.state(), k = el.dataset.setting, v = el.value;
     if (k === "nwExcludeMsi") s.settings.nwExcludeMsi = v === "1";
     else if (k === "inboxUrl") s.settings.inboxUrl = v.trim();
-    else if (k === "partnerPct") s.settings.partnerPct = Math.max(0, Math.min(100, parseAmount(v) || 0));
+    else if (k === "partnerPct") { const n = parseAmount(v); if (!Number.isFinite(n)) { toast("Escribe un número de 0 a 100"); return; } s.settings.partnerPct = Math.max(0, Math.min(100, n)); }
     else if (k === "fundPct") s.settings.fund.myPct = Math.max(0, Math.min(100, parseAmount(v) || 0));
     else s.settings[k] = v || null;
     if (k === "name") s.settings.name = v.trim();
@@ -375,6 +380,7 @@ initGestures({
   onDuplicate: (id) => { const t = st.byId("tx", id); if (!t) return; st.upsert("tx", { ...t, id: uid(), hist: false, date: today(), createdAt: Date.now() }); render(); toast("Duplicado con fecha de hoy"); },
 });
 // atajo de teclado (escritorio): N = registrar gasto
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && sheetOpen()) closeSheet(); });
 document.addEventListener("keydown", (e) => {
   if (sheetOpen() || e.metaKey || e.ctrlKey || e.altKey || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName)) {
     if (e.key === "Enter" && document.activeElement?.closest("#inlineAdd")) { e.preventDefault(); inlineAdd(); }

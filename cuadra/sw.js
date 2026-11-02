@@ -1,7 +1,7 @@
 // ================= Service Worker · Cuadra =================
 // "Red primero" para el código (siempre la versión más nueva) y respaldo
 // desde caché para que la app abra sin internet.
-const VERSION = "v11";
+const VERSION = "v12";
 const CACHE = "cuadra-" + VERSION;
 const ASSETS = [
   "./", "./index.html", "./css/styles.css", "./manifest.webmanifest",
@@ -26,9 +26,10 @@ self.addEventListener("fetch", (e) => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== location.origin) return; // fuentes, etc.: red directa
+  if (url.pathname.endsWith(".php") || url.search.includes("token=")) return; // buzón: siempre en vivo
   e.respondWith(
     fetch(req)
-      .then((res) => { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {}); return res; })
+      .then((res) => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {}); } return res; })
       .catch(() => caches.match(req).then((hit) => hit || caches.match("./index.html")))
   );
 });

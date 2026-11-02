@@ -171,7 +171,7 @@ export function cardInfo(S, a, C) {
   const limit = Number(a.limit) || 0;
   return {
     bal, debt, msiRemaining, msiMonthly, plans,
-    debtNoMsi: r2(Math.max(0, debt - msiRemaining)),
+    debtNoMsi: r2(debt - msiRemaining), // negativo = a favor sin contar MSI (como en tu Excel)
     credit: bal > 0 ? bal : 0, // saldo a favor
     limit, available: r2(limit - debt),
     usedPct: limit ? Math.min(100, (debt / limit) * 100) : 0,
@@ -208,7 +208,8 @@ export function monthStats(S, key) {
     const info = msiInfo(m);
     // antes de trackFrom las mensualidades ya vienen en el histórico importado
     const from = m.trackFrom && m.trackFrom > `${key}-01` ? m.trackFrom : `${key}-01`;
-    for (const ins of msiInstallments(m, from, `${key}-31`)) {
+    const upto = key === monthKey(today()) ? today() : `${key}-31`;
+    for (const ins of msiInstallments(m, from, upto)) {
       const v = (ins.amount * info.myPct) / 100;
       if (v > 0) { add(m.categoryId, v); msiMine += v; }
     }
@@ -229,14 +230,14 @@ export function openCorteStart(S) {
   const last = [...S.cortes].sort((a, b) => (a.end < b.end ? 1 : -1))[0];
   if (last) return addDays(last.end, 1);
   if (S.settings.corteStart) return S.settings.corteStart;
-  const ev = pid ? personEvents(S, pid) : [];
-  return ev.length ? ev[ev.length - 1].date : addDays(today(), -6);
+    return addDays(today(), -6);
 }
 
 export function corteSummary(S, start, end) {
   const pid = S.settings.partnerId;
   const opening = personBalanceBefore(S, pid, start);
-  const items = personEvents(S, pid, end).filter((e) => e.date >= start && e.date <= end).reverse();
+  const upto = end < today() ? end : today();
+  const items = personEvents(S, pid, upto).filter((e) => e.date >= start && e.date <= end).reverse();
   const groups = {};
   for (const e of items) groups[e.kind] = r2((groups[e.kind] || 0) + e.amount);
   const change = r2(items.reduce((s, e) => s + e.amount, 0));
@@ -411,7 +412,7 @@ export function analysis(S, n, brandFor, { noExtra = false } = {}) {
   }
   for (const pl of S.msi) {
     const info = msiInfo(pl);
-    for (const ins of msiInstallments(pl, pl.trackFrom || "0000-00-00", `${cur}-31`)) {
+    for (const ins of msiInstallments(pl, pl.trackFrom || "0000-00-00", today())) {
       const m = monthKey(ins.date);
       if (!byMonth[m]) continue;
       addSpend({ concept: pl.concept, categoryId: pl.categoryId }, m, ins.amount, (ins.amount * info.myPct) / 100, pl.accountId, pl.categoryId, merchantKey({ concept: pl.concept }, brandFor));

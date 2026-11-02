@@ -975,3 +975,29 @@ code.mono { font-family: ui-monospace, Menlo, monospace; font-size: 12px; backgr
 .row:active:not(.static) { transform: scale(0.995); }
 html, body { overscroll-behavior-y: none; }
 #main { overscroll-behavior: contain; }
+
+/* ---------- Correcciones de QA ---------- */
+button.card, .row-card { width: 100%; text-align: left; font: inherit; color: inherit; }
+.row-card .mid { min-width: 0; }
+.row-card .mid small { white-space: normal; }
+#main { overflow-x: hidden; }
+body.sheet-open .toast { bottom: auto; top: calc(var(--safe-top) + 14px); }
+/* áreas táctiles de al menos 44px */
+.icon-btn { width: 44px; height: 44px; }
+#back { width: 44px; height: 44px; margin-left: -10px; }
+.tabbar a { min-height: 48px; justify-content: center; }
+.month-nav button:not(.pill) { width: 44px; height: 44px; }
+.tabs a { min-height: 40px; display: flex; align-items: center; justify-content: center; }
+.sec-link { min-height: 44px; display: inline-flex; align-items: center; }
+.pill { min-height: 36px; display: inline-flex; align-items: center; }
+.nw-row > a { padding: 6px 0; }
+input, select { font-size: 16px !important; }
+/* registro rápido: que quepa con el notch y la barra del iPhone */
+.quick-sheet .sheet-body { padding-top: 10px; }
+.qa { gap: 8px; }
+.qa-amount { padding-top: 0; }
+.qa-amount .val { font-size: 42px; }
+.keypad { grid-template-rows: repeat(4, clamp(42px, 6.2vh, 54px)); gap: 6px; }
+.qa:has(#qaPayer:not(.hidden)) .qa-freq { display: none; }
+.qa:has(#qaPayer:not(.hidden)) .qa-amount .val { font-size: 36px; }
+.cat-pill { width: 66px; padding: 6px 2px; }

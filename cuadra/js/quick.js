@@ -167,7 +167,7 @@ export function quickAdd(mode = "expense", preset = {}) {
     const amount = parseAmount(state.expr.replace(/\+$/, ""));
     if (!(amount > 0)) { toast("Escribe el monto"); $(".qa-amount").classList.add("shake"); setTimeout(() => $(".qa-amount").classList.remove("shake"), 400); return; }
     const concept = form.elements.concept.value.trim();
-    const base = { id: uid(), concept, date: state.date, categoryId: state.categoryId || "", shares: [], createdAt: Date.now() };
+    const base = { id: uid(), concept, date: state.date, categoryId: state.categoryId || "", shares: [], createdAt: Date.now(), ...(preset.subId ? { subId: preset.subId } : {}) };
     const pid = s.settings.partnerId;
     if (state.mode === "income") {
       if (!state.accountId) return toast("Elige la cuenta");

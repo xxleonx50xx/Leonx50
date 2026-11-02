@@ -177,12 +177,12 @@ export function home(ui) {
   const s = S();
   const C = compute(s);
   if (!s.accounts.length) {
-    return { title: "Inicio", html: empty("wallet", `Hola${s.settings.name ? ", " + esc(s.settings.name) : ""}`, "Empieza agregando tus cuentas: débito, tarjetas de crédito, efectivo y tu fondo común.", `<button class="btn primary" data-act="newAccount">${icon("plus")}<span>Agregar cuenta</span></button><a class="btn ghost" href="#/respaldo">Importar respaldo</a>`) };
+    return { title: "Inicio", html: empty("wallet", `Hola${s.settings.name ? ", " + s.settings.name : ""}`, "Empieza agregando tus cuentas: débito, tarjetas de crédito, efectivo y tu fondo común.", `<button class="btn primary" data-act="newAccount">${icon("plus")}<span>Agregar cuenta</span></button><a class="btn ghost" href="#/respaldo">Importar respaldo</a>`) };
   }
   const active = s.accounts.filter((a) => !a.archived);
   const assets = active.filter((a) => a.type !== "credit").reduce((x, a) => x + C.acc[a.id], 0);
   const cardDebtFull = active.filter((a) => a.type === "credit").reduce((x, a) => x + Math.max(0, -C.acc[a.id]), 0);
-  const cardDebt = C.nwNoMsi ? Math.max(0, cardDebtFull - C.msiDebt) : cardDebtFull;
+  const cardDebt = C.nwNoMsi ? cardDebtFull - C.msiDebt : cardDebtFull;
   const stale = active.filter((a) => !a.lastReconciled || daysBetween(a.lastReconciled, today()) > 7);
   const backupOld = s.tx.filter((t) => !t.hist).length > 5 && (!s.settings.lastBackup || daysBetween(s.settings.lastBackup, today()) > 7);
   const p = st.partner();
@@ -194,7 +194,7 @@ export function home(ui) {
       <div class="nw-big ${C.netWorth < 0 ? "neg" : ""}">${money(C.netWorth)}</div>
       <div class="nw-row">
         <a href="#/cuentas"><small>Tengo</small><b>${money0(assets)}</b></a><i></i>
-        <a href="#/msi"><small>${C.nwNoMsi ? "Debo (sin MSI)" : "Debo"}</small><b class="neg">${money0(cardDebt)}</b></a><i></i>
+        <a href="#/msi"><small>${C.nwNoMsi ? (cardDebt < 0 ? "A favor (sin MSI)" : "Debo (sin MSI)") : "Debo"}</small><b class="${cardDebt < 0 ? "pos" : "neg"}">${money0(Math.abs(cardDebt))}</b></a><i></i>
         <a href="#/personas"><small>Me deben</small><b class="pos">${money0(C.owedToMe)}</b></a>
       </div>
     </section>`;
@@ -216,7 +216,7 @@ export function home(ui) {
   // 4. Este mes vs promedio
   const A = analysis(s, 6, brandFor);
   const curM = A.byMonth[A.cur];
-  const ms = monthStats(s, ui.month);
+  const ms = monthStats(s, monthKey(today()));
   const pace = A.avg ? (curM.spend / A.avg) * 100 : 0;
   const dayPct = (new Date().getDate() / new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()) * 100;
   const month = `<a class="card month-card" href="#/analisis">
@@ -360,7 +360,7 @@ export function accountDetail(id, ui) {
       ${btn("Bono", `data-act="add" data-kind="bonus" data-acc="${a.id}"`, "", "star")}
     </div>
     <div class="card">
-      ${kv("Deuda sin MSI", money(ci.debtNoMsi))}
+      ${kv(ci.debtNoMsi < 0 ? "A favor sin contar MSI" : "Deuda sin MSI", `<span class="${ci.debtNoMsi < 0 ? "pos" : ""}">${money(Math.abs(ci.debtNoMsi))}</span>`)}
       ${kv("MSI por pagar", money(ci.msiRemaining))}
       ${kv("Mensualidades MSI del mes", money(ci.msiMonthly))}
       ${ci.nextCut ? kv("Próximo corte", `${fmtDate(ci.nextCut)} <small>(${relDays(ci.nextCut)})</small>`) : ""}
@@ -842,7 +842,7 @@ export function settings() {
       ${!s.cortes.length ? `<label class="field"><span class="lbl">Inicio del primer corte</span><input type="date" data-setting="corteStart" value="${st2.corteStart || ""}"/><small class="hint">Hoy es ${DIAS_L[new Date().getDay()]}.</small></label>` : ""}
     </div>
     <p class="fine pad">Los cambios se guardan solos.</p>
-    ${section("Recordatorios", `<div class="card"><p class="lead" style="margin:0 0 12px">Agrega a tu Calendario del iPhone avisos para pagar tarjetas, cerrar el corte con Liz, la renta, suscripciones y los pagos de tu papá. El iPhone te notifica solo.</p>
+    ${section("Recordatorios", `<div class="card"><p class="lead" style="margin:0 0 12px">Agrega a tu Calendario del iPhone avisos para pagar tarjetas, cerrar el corte con tu pareja, la renta, suscripciones y los pagos de tu papá. El iPhone te notifica solo.</p>
       ${btn("Agregar recordatorios al Calendario", `data-act="exportIcs"`, "primary full", "calendar")}</div>`)}
     ${section("Compras con Apple Pay", `<div class="card">
       <p class="lead" style="margin:0 0 10px">Con la app <b>Atajos</b> del iPhone, cada vez que pagas acercando el teléfono se puede mandar la compra a Cuadra.</p>
@@ -992,7 +992,7 @@ export function limitsView(ui) {
     html += `<div class="card lim-list">${L.rows.map((r) => limitRow(r)).join("")}</div>`;
   }
   if (L.unlimited > 0) html += `<p class="fine pad">Además gastaste ${money0(L.unlimited)} en categorías sin límite.</p>`;
-  html += `<p class="fine pad">Cuenta tu parte de cada gasto (lo que pagó Liz por su lado no se suma) y tus mensualidades MSI. La rayita marca en qué día del mes vas.</p>`;
+  html += `<p class="fine pad">Cuenta tu parte de cada gasto (lo que pagó tu pareja por su lado no se suma) y tus mensualidades MSI. La rayita marca en qué día del mes vas.</p>`;
   return { title: "Límites", back: !ui.desk, action, html };
 }
 

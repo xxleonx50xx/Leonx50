@@ -14,7 +14,17 @@ const done = (msg) => { refresh(); if (msg) toast(msg); };
 const partnerName = () => st.partner()?.name || "tu pareja";
 
 // ---------- helpers ----------
+function wireSplitDefaults(form) {
+  const pct = form.elements.splitPct;
+  if (!pct) return;
+  pct.addEventListener("input", () => (pct.dataset.touched = "1"));
+  form.addEventListener("change", (e) => {
+    if (e.target.name !== "split" || pct.dataset.touched) return;
+    pct.value = e.target.value === "other" ? 100 : S().settings.partnerPct;
+  });
+}
 function wireConditional(form) {
+  wireSplitDefaults(form);
   const val = (name) => {
     const els = form.elements[name];
     if (!els) return form.dataset[name] ?? "";
@@ -216,6 +226,12 @@ export function incomeForm(t = null, preset = {}) {
       const accountId = fd.get("accountId");
       if (!accountId) return toast("Elige la cuenta"), false;
       const categoryId = fd.get("categoryId") || "i_otro";
+      if (!t && fd.get("cashPart")) {
+        const cash = parseAmount(fd.get("cashAmt") || "");
+        if (!(cash > 0 && cash < amount)) return fieldError(form, "cashAmt", "El efectivo debe ser mayor a 0 y menor al total");
+        if (!S().accounts.some((x) => x.type === "cash" && !x.archived)) return toast("Agrega una cuenta de Efectivo primero"), false;
+        if (st.account(accountId)?.type === "cash") return toast("Elige la cuenta del banco; el efectivo va aparte"), false;
+      }
       st.upsert("tx", {
         ...(t || {}), id: t?.id || uid(), type: "income", amount, accountId, categoryId,
         concept: fd.get("concept").trim(), date: fd.get("date") || today(),
@@ -273,7 +289,7 @@ export function transferForm(t = null, preset = {}) {
         const C = compute(S());
         const ci = cardInfo(S(), a, C);
         const opts = [["Deuda total", ci.debt]];
-        if (ci.msiRemaining > 0) opts.push(["Sin MSI + mensualidades", round2(ci.debtNoMsi + ci.msiMonthly)]);
+        if (ci.msiRemaining > 0 && ci.debtNoMsi + ci.msiMonthly > 0) opts.push(["Sin MSI + mensualidades", round2(Math.max(0, ci.debtNoMsi) + ci.msiMonthly)]);
         q.innerHTML = opts.filter(([, n]) => n > 0).map(([l, n]) => `<button type="button" class="pill" data-fill="${n}">${l}: ${money(n)}</button>`).join("");
       };
       form.addEventListener("change", (e) => e.target.name === "toAccountId" && upd());
@@ -443,7 +459,7 @@ export function reconcileForm(accountId) {
         <div class="field"><span class="lbl">¿Qué fue la diferencia?</span>${segmented("what", [{ value: "adjust", label: "Ajuste" }, { value: "expense", label: "Gasto sin anotar" }, { value: "income", label: "Ingreso sin anotar" }], "adjust")}</div>
         <div data-show-if="what=expense|income">${field("Concepto", textInput("whatConcept", "", "Ej. efectivo de Leo, Oxxo…"))}</div>
         <div data-show-if="what=expense"><div class="field"><span class="lbl">Categoría</span>${chips("whatCat", categoryOptions("expense"), "c_otros", { cls: "wrap small" })}</div></div>
-        <div data-show-if="what=income"><div class="field"><span class="lbl">Tipo</span>${chips("whatInc", categoryOptions("income"), "i_trabajo", { cls: "wrap small" })}</div></div>
+        <div data-show-if="what=income"><div class="field"><span class="lbl">Tipo</span>${chips("whatInc", categoryOptions("income"), "i_otro", { cls: "wrap small" })}</div></div>
       </div>`,
     submitLabel: "Guardar cuadre",
     onMount: (form) => {
@@ -479,11 +495,15 @@ export function reconcileForm(accountId) {
         const diff = r == null ? 0 : round2(r - appBal);
         what.classList.toggle("hidden", Math.abs(diff) < 0.01);
         // si tienes MÁS dinero del que la app cree, lo típico es un ingreso sin anotar; si tienes MENOS, un gasto
-        if (!what.dataset.touched) form.elements.what.value = Math.abs(diff) < 0.01 ? "adjust" : (credit ? diff < 0 : diff < 0) ? "expense" : "income";
+        if (!what.dataset.touched) form.elements.what.value = Math.abs(diff) < 0.01 || credit ? "adjust" : diff < 0 ? "expense" : "income";
+        // solo se puede elegir la opción que corresponde al signo de la diferencia
+        form.querySelector('input[name="what"][value="expense"]').disabled = diff > 0;
+        form.querySelector('input[name="what"][value="income"]').disabled = diff < 0;
         form._apply();
       };
-      form.addEventListener("input", updWhat);
-      form.addEventListener("change", (e) => { if (e.target.name === "what") what.dataset.touched = "1"; updWhat(); });
+      const onWhat = (e) => { if (e.target.name === "what") { what.dataset.touched = "1"; form._apply(); return; } updWhat(); };
+      form.addEventListener("input", onWhat);
+      form.addEventListener("change", onWhat);
     },
     onSubmit: (form) => {
       const r = form._realBal();
@@ -498,10 +518,11 @@ export function reconcileForm(accountId) {
         else if (what === "income" && diff > 0) st.upsert("tx", { ...base, type: "income", amount: diff, categoryId: form.elements.whatInc?.value || "i_otro", concept: concept || "Ingreso sin anotar (cuadre)", personId: "" });
         else st.upsert("tx", { ...base, type: "adjust", amount: diff, concept: "Ajuste de cuadre" });
       }
+      const kindDone = Math.abs(diff) < 0.01 ? "" : S().tx[S().tx.length - 1]?.type;
       a.lastReconciled = today();
       a.lastReconciledBalance = r;
       st.upsert("accounts", a);
-      done(Math.abs(diff) < 0.01 ? "✓ Cuenta cuadrada" : `Ajuste de ${money(diff)} registrado`);
+      done(Math.abs(diff) < 0.01 ? "✓ Cuenta cuadrada" : kindDone === "expense" ? `Gasto sin anotar de ${money(Math.abs(diff))} registrado` : kindDone === "income" ? `Ingreso sin anotar de ${money(diff)} registrado` : `Ajuste de ${money(diff)} registrado`);
     },
   });
 }
@@ -948,7 +969,7 @@ export function subForm(x = null) {
       ${toggle("active", "Activa", v.active !== false)}`,
     extraButtons: [
       ...(x ? [{ label: "Eliminar", cls: "danger", onClick: () => { if (!confirm("¿Eliminar suscripción?")) return false; st.remove("subs", x.id); done("Eliminada"); } }] : []),
-      ...(x && x.active ? [{ label: "Registrar cobro", onClick: () => { closeSheet(true); quickAdd("expense", { amount: x.amount, concept: x.name, accountId: x.accountId || undefined, categoryId: x.categoryId }); return false; } }] : []),
+      ...(x && x.active ? [{ label: "Registrar cobro", onClick: () => { closeSheet(true); quickAdd("expense", { amount: x.amount, concept: x.name, accountId: x.accountId || undefined, categoryId: x.categoryId, subId: x.id }); return false; } }] : []),
     ],
     onSubmit: (form, fd) => {
       const name = fd.get("name").trim();
