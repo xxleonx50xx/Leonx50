@@ -4,7 +4,8 @@ import * as st from "./store.js";
 import { uid, ACCOUNT_TYPES } from "./store.js";
 import { esc, money, parseAmount, round2, today, fmtDate } from "./format.js";
 import { openSheet, closeSheet, toast } from "./ui.js";
-import { compute, naturalBalance, categoriesByUse } from "./calc.js";
+import { compute, naturalBalance, categoriesByUse, limitsStatus } from "./calc.js";
+import { monthKey } from "./format.js";
 import { icon, brandFor, logo, iconTile, colorTile, CAT_COLOR, APPLE } from "./logos.js";
 
 let refresh = () => {};
@@ -152,7 +153,9 @@ export function quickAdd(mode = "expense", preset = {}) {
     st.save();
     closeSheet();
     refresh();
-    toast(`${money(amount)} guardado`);
+    const lim = state.categoryId && state.mode !== "income" ? limitsStatus(s, monthKey(state.date)).rows.find((x) => x.id === state.categoryId) : null;
+    const cname = s.categories.find((c) => c.id === state.categoryId)?.name;
+    toast(lim ? (lim.remaining >= 0 ? `Guardado · te quedan ${money(lim.remaining)} de ${cname}` : `Guardado · te pasaste ${money(-lim.remaining)} en ${cname}`) : `${money(amount)} guardado`);
   }
 
   form.addEventListener("click", (e) => {

@@ -8,7 +8,7 @@ import { bar, kv, moneyCls } from "./ui.js";
 import {
   compute, cardInfo, msiInfo, personEvents, planInfo, monthStats, corteSummary, openCorteStart, corteDefaultEnd,
   fundStats, goalProgress, naturalBalance, txAccountEffects, EVENT_LABEL, houseStats, houseLine, isHouse, categoriesByUse,
-  analysis, subInfo, subMonthly,
+  analysis, subInfo, subMonthly, limitsStatus,
 } from "./calc.js";
 import { icon, brandFor, logo, iconTile, colorTile, APPLE, CAT_COLOR } from "./logos.js";
 import { accountTile, categoryTile } from "./quick.js";
@@ -246,6 +246,9 @@ export function home(ui) {
     house = `<a class="card row-card" href="#/casa">${iconTile("house", "accent")}
       <div class="mid"><b>Gastos de casa</b><small>${money0(hs.sum.total)}${hs.budgetTotal ? ` de ${money0(hs.budgetTotal)}` : ""} · tú ${money0(hs.sum.mine)} · ${esc(p.name)} ${money0(hs.sum.theirs)}</small>${hs.budgetTotal ? bar((hs.sum.total / hs.budgetTotal) * 100, hs.sum.total > hs.budgetTotal ? "hot" : "") : ""}</div></a>`;
   }
+  const LS = limitsStatus(s, monthKey(today()));
+  const limits = LS.rows.length ? section("Límites del mes", `<a class="card lim-list" href="#/limites">${LS.rows.slice(0, 4).map((r) => limitRow(r)).join("")}</a>`, link(`Te quedan ${money0(Math.max(0, LS.totalLimit - LS.totalSpent))}`, "#/limites"))
+    : section("Límites del mes", `<button class="card row-card" data-act="editLimits">${iconTile("target", "accent")}<div class="mid"><b>Ponle límite a tu mes</b><small>Súper, restaurantes, gasolina… y te digo cuánto te queda</small></div>${icon("chevron-right", "dim")}</button>`);
   const goals = s.goals.length ? section("Metas", `<div class="card list">${s.goals.slice(0, 3).map((g) => goalRow(g, C)).join("")}</div>`, link("Ver todas", "#/metas")) : "";
   const recent = [...s.tx].sort(sortTx).slice(0, ui.desk ? 10 : 6);
   const recentHtml = section("Últimos movimientos", recent.length
@@ -253,8 +256,8 @@ export function home(ui) {
     : `<p class="muted">Aún no hay movimientos. Toca ＋ para registrar.</p>`, link("Ver todos", "#/movs"));
 
   const html = ui.desk
-    ? `${alerts}<div class="dash"><div>${head}${month}${partner}${house}</div><div>${agenda || section("Próximos 14 días", `<p class="muted">Nada pendiente.</p>`)}</div></div>${wallet}${goals}${recentHtml}`
-    : `${head}${alerts}${wallet}${quick}${month}${partner}${house}${agenda}${goals}${recentHtml}`;
+    ? `${alerts}<div class="dash"><div>${head}${month}${limits}${partner}${house}</div><div>${agenda || section("Próximos 14 días", `<p class="muted">Nada pendiente.</p>`)}</div></div>${wallet}${goals}${recentHtml}`
+    : `${head}${alerts}${wallet}${quick}${month}${limits}${partner}${house}${agenda}${goals}${recentHtml}`;
   return { title: `Hola${s.settings.name ? ", " + s.settings.name : ""}`, html, cls: "home" };
 }
 
@@ -615,6 +618,7 @@ export function more() {
     ["#/analisis", "sliders-horizontal", "Análisis y promedios", "Cuánto gastas en promedio", APPLE.indigo],
     ["#/suscripciones", "repeat", "Suscripciones", `${(s.subs || []).filter((x) => x.active).length} activas`, APPLE.red],
     ["#/fondo", "house-plus", "Fondo común", s.settings.fund.accountId ? accName(s.settings.fund.accountId) : "Sin configurar", APPLE.brown],
+    ["#/limites", "gauge", "Límites del mes", `${Object.values(s.settings.limits || {}).filter((v) => v > 0).length} categorías`, APPLE.orange],
     ["#/metas", "target", "Metas de ahorro", `${s.goals.length} metas`, APPLE.green],
     ["#/msi", "calendar", "Meses sin intereses", `${s.msi.filter((m) => !msiInfo(m).done).length} vigentes`, APPLE.orange],
     ["#/cuadrar", "scale", "Cuadrar cuentas", "", APPLE.teal],
@@ -663,15 +667,29 @@ export function movements(ui) {
       ${ui.desk ? `<select data-filter="cat"><option value="">Todas las categorías</option>${s.categories.map((c) => `<option value="${c.id}" ${f.cat === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select>` : ""}
     </div>
     <div class="month-nav card">${f.all ? `<b>Todos los meses</b>` : `<button data-act="month" data-d="-1">${icon("chevron-left")}</button><b>${fmtMonth(ui.month)}</b><button data-act="month" data-d="1">${icon("chevron-right")}</button>`}<button class="pill" data-act="toggleAll">${f.all ? "Por mes" : "Ver todo"}</button></div>`;
-  let html = filters;
-  if (ui.desk) {
+  // resumen y gráfica simple del filtro actual
+  const sumExp = list.filter((t) => t.type === "expense" && !t.excluded).reduce((q, t) => q + Number(t.amount), 0);
+  const sumMine = list.filter((t) => t.type === "expense" && !t.excluded).reduce((q, t) => q + Number(t.amount) - (t.shares || []).reduce((z, x) => z + Number(x.amount || 0), 0), 0);
+  const sumInc = list.filter((t) => t.type === "income").reduce((q, t) => q + Number(t.amount), 0);
+  const byCat = {};
+  for (const t of list) if (t.type === "expense" && !t.excluded) byCat[t.categoryId || "_"] = (byCat[t.categoryId || "_"] || 0) + Number(t.amount);
+  const topC = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  const maxC = topC[0]?.[1] || 1;
+  const catChip = f.cat ? `<button class="pill filter-chip" data-act="filterCat" data-id="${f.cat}">${esc(catOf(f.cat)?.name || "Categoría")} ${icon("x")}</button>` : "";
+  const summary = catChip + `<div class="mov-sum card">
+      <div class="stats3"><div><small>Gastos</small><b>${money0(sumExp)}</b></div><div><small>Tu parte</small><b>${money0(sumMine)}</b></div><div><small>Ingresos</small><b class="pos">${money0(sumInc)}</b></div></div>
+      ${topC.length ? `<div class="hbars">${topC.map(([id, v]) => { const c = catOf(id); return `<button class="hbar" data-act="filterCat" data-id="${id}">${categoryTile(c, "xs")}<span>${esc(c?.name || "Sin categoría")}</span><i><em style="width:${((v / maxC) * 100).toFixed(1)}%"></em></i><b>${money0(v)}</b></button>`; }).join("")}</div>` : ""}
+    </div>`;
+  const viewSw = ui.desk ? "" : `<div class="tabs view-sw"><a href="#/movs" data-act="movView" data-v="list" class="${ui.movView !== "table" ? "on" : ""}">${icon("layout-list")} Lista</a><a href="#/movs" data-act="movView" data-v="table" class="${ui.movView === "table" ? "on" : ""}">${icon("table")} Tabla</a></div>`;
+  let html = filters + summary + viewSw;
+  if (ui.desk || ui.movView === "table") {
     const sort = ui.sort || { key: "date", dir: -1 };
     const rows = [...list.map((t) => ({ t, date: t.date, amt: Math.abs(Number(t.amount)), c: t.createdAt || 0 })), ...msis.map((m) => ({ m, date: m.date, amt: Number(m.total), c: m.createdAt || 0 }))];
     rows.sort((a, b) => sort.key === "amount" ? (a.amt - b.amt) * sort.dir : (a.date < b.date ? -1 : a.date > b.date ? 1 : a.c - b.c) * sort.dir);
     const spend = list.reduce((x, t) => x + (t.type === "expense" ? Number(t.amount) : 0), 0);
     const inc = list.reduce((x, t) => x + (t.type === "income" ? Number(t.amount) : 0), 0);
     html += table(TX_COLS, rows.slice(0, 1000).map((r) => r.t ? txTableRow(r.t) : { attrs: `data-act="msi" data-id="${r.m.id}" class="click"`, cells: [fmtDate(r.m.date, { plain: true }), `<div class="cell-main">${iconTile("calendar", "", "xs")}<b>${esc(r.m.concept)}</b></div>`, "Compra a MSI", esc(accName(r.m.accountId)), (r.m.shares || []).map((x) => `<span class="tag">${esc(pName(x.personId))} ${x.pct}%</span>`).join("") || "—", `<b class="amt muted">${money(r.m.total)}</b>`] }),
-      { sort, head: inlineAddRow(), foot: `<tr><td colspan="5">${rows.length} movimientos · gastos ${money(spend)} · ingresos ${money(inc)}</td><td class="num"></td></tr>` });
+      { sort, head: ui.desk ? inlineAddRow() : "", foot: `<tr><td colspan="5">${rows.length} movimientos · gastos ${money(spend)} · ingresos ${money(inc)}</td><td class="num"></td></tr>` });
   } else {
     const merged = [...list.map((t) => ({ t, date: t.date, c: t.createdAt || 0 })), ...msis.map((m) => ({ m, date: m.date, c: m.createdAt || 0 }))].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.c - a.c));
     const shown = merged.slice(0, 400);
@@ -810,7 +828,7 @@ export function settings() {
   const ppl = s.people.filter((p) => !p.archived);
   const html = `
     <div class="card form">
-      <label class="field"><span class="lbl">Apariencia</span><select data-setting="theme">${[["auto", "Automática (como tu iPhone)"], ["dark", "Oscura"], ["light", "Clara"]].map(([v, l]) => `<option value="${v}" ${(st2.theme || "auto") === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+      <label class="field"><span class="lbl">Apariencia</span><select data-setting="theme">${[["dark", "Oscura (recomendada)"], ["auto", "Automática (como tu iPhone)"], ["light", "Clara"]].map(([v, l]) => `<option value="${v}" ${(st2.theme || "dark") === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>
       <label class="field"><span class="lbl">Tu nombre</span><input data-setting="name" value="${esc(st2.name)}" placeholder="Fer"/></label>
       <label class="field"><span class="lbl">Tu pareja</span><select data-setting="partnerId"><option value="">— Ninguna —</option>${ppl.map((p) => `<option value="${p.id}" ${st2.partnerId === p.id ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label>
       <label class="field"><span class="lbl">% que paga tu pareja en gastos compartidos</span><input data-setting="partnerPct" inputmode="decimal" value="${st2.partnerPct}"/></label>
@@ -921,4 +939,45 @@ export function subsView(ui) {
   }
   html += `<p class="fine pad">La app busca el cobro real en tus movimientos (por nombre o logo) para avisarte si dejó de cobrarse, si llegó a otra tarjeta o si cambió el monto.</p>`;
   return { title: "Suscripciones", back: !ui.desk, action, html };
+}
+
+// ================= LÍMITES DEL MES =================
+const LIM_CLS = { ok: "", warn: "warnbar", over: "hot" };
+export function limitRow(r, desk = false) {
+  const cat = catOf(r.id);
+  const msg = r.status === "over" ? `<span class="neg">Te pasaste ${money0(-r.remaining)}</span>` : `Te quedan <b>${money0(r.remaining)}</b>`;
+  return `<div class="lim-row ${r.status}">
+    <div class="lr-top">${categoryTile(cat, "sm")}<div class="lr-name"><b>${esc(cat?.name || "Categoría")}</b><small>${money0(r.spent)} de ${money0(r.limit)}</small></div><div class="lr-left">${msg}</div></div>
+    <div class="lim-bar ${LIM_CLS[r.status]}"><i style="width:${Math.min(100, r.pct).toFixed(1)}%"></i>${r.pct > 100 ? "" : ""}</div>
+    ${r.status === "warn" && r.pace > 1.15 ? `<small class="lr-note">Vas más rápido que el mes: a este ritmo cierras en ${money0(r.projected)}</small>` : ""}
+  </div>`;
+}
+export function limitsView(ui) {
+  const s = S();
+  const L = limitsStatus(s, ui.month);
+  const action = `<button class="icon-btn" data-act="editLimits" aria-label="Editar límites">${icon("pencil")}</button>`;
+  const nav = `<div class="month-nav card"><button data-act="month" data-d="-1">${icon("chevron-left")}</button><b>${fmtMonth(ui.month)}</b><button data-act="month" data-d="1">${icon("chevron-right")}</button></div>`;
+  if (!L.rows.length) return { title: "Límites", back: !ui.desk, action, html: nav + empty("target", "Ponle límite a tu mes", "Define cuánto quieres gastar como máximo en súper, restaurantes, gasolina… y la app te dice cuánto te queda.", `<button class="btn primary" data-act="editLimits">${icon("plus")}<span>Definir límites</span></button>`) };
+  const pct = L.totalLimit ? (L.totalSpent / L.totalLimit) * 100 : 0;
+  const left = L.totalLimit - L.totalSpent;
+  let html = nav + `<div class="hero lim-hero">
+      <div class="hero-top"><span>${left >= 0 ? "Te queda para el mes" : "Te pasaste este mes"}</span></div>
+      <div class="big ${left < 0 ? "neg" : ""}">${money0(Math.abs(left))}</div>
+      <div class="lim-bar big ${pct > 100 ? "hot" : pct > 85 ? "warnbar" : ""}"><i style="width:${Math.min(100, pct).toFixed(1)}%"></i><span class="pace-mark" style="left:${(L.frac * 100).toFixed(1)}%"></span></div>
+      <div class="hero-row">
+        <div><small>Gastado</small><b>${money0(L.totalSpent)}</b></div>
+        <div><small>Límite</small><b>${money0(L.totalLimit)}</b></div>
+        ${L.daysLeft ? `<div><small>Por día (${L.daysLeft} días)</small><b>${money0(L.perDay)}</b></div>` : ""}
+      </div>
+    </div>`;
+  if (ui.desk) {
+    html += table([{ label: "Categoría" }, { label: "Límite", cls: "num" }, { label: "Gastado", cls: "num" }, { label: "Avance" }, { label: "Te queda", cls: "num" }, { label: "Proyección al cierre", cls: "num" }],
+      L.rows.map((r) => { const c = catOf(r.id); return { attrs: `data-act="editLimits" class="click"`, cells: [`<div class="cell-main">${categoryTile(c, "xs")}<b>${esc(c?.name || "")}</b></div>`, money0(r.limit), money0(r.spent), `<div class="lim-bar ${LIM_CLS[r.status]} tblbar"><i style="width:${Math.min(100, r.pct).toFixed(1)}%"></i></div> <small class="muted">${r.pct.toFixed(0)}%</small>`, `<b class="amt ${r.remaining < 0 ? "neg" : ""}">${money0(r.remaining)}</b>`, `<span class="${r.projected > r.limit ? "neg" : "muted"}">${money0(r.projected)}</span>`] }; }),
+      { foot: `<tr><td>Total</td><td class="num">${money0(L.totalLimit)}</td><td class="num">${money0(L.totalSpent)}</td><td></td><td class="num">${money0(left)}</td><td></td></tr>` });
+  } else {
+    html += `<div class="card lim-list">${L.rows.map((r) => limitRow(r)).join("")}</div>`;
+  }
+  if (L.unlimited > 0) html += `<p class="fine pad">Además gastaste ${money0(L.unlimited)} en categorías sin límite.</p>`;
+  html += `<p class="fine pad">Cuenta tu parte de cada gasto (lo que pagó Liz por su lado no se suma) y tus mensualidades MSI. La rayita marca en qué día del mes vas.</p>`;
+  return { title: "Límites", back: !ui.desk, action, html };
 }

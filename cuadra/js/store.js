@@ -66,6 +66,8 @@ export const defaultState = () => ({
     corteStart: null, // fecha inicial del primer corte
     fund: { accountId: null, myPct: 60, budget: [] },
     lastBackup: null,
+    limits: {}, // límite mensual por categoría (tu parte)
+    theme: "dark",
   },
   accounts: [],
   categories: DEFAULT_CATEGORIES(),
@@ -124,6 +126,7 @@ export function normalize(o) {
   if (!out.categories.length) out.categories = DEFAULT_CATEGORIES();
   out.categories.forEach((c) => { if (!c.ico && CAT_ICO[c.id]) c.ico = CAT_ICO[c.id]; });
   out.settings.catUse ||= {};
+  out.settings.limits ||= {};
   out.goals.forEach((g) => (g.contributions ||= []));
   out.tx.forEach((t) => (t.shares ||= []));
   out.msi.forEach((m) => (m.shares ||= []));

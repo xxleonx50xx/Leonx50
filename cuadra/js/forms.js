@@ -925,3 +925,42 @@ export function subForm(x = null) {
     },
   });
 }
+
+// ================= LÍMITES MENSUALES =================
+export function limitsForm() {
+  const s = S();
+  const lim = s.settings.limits || {};
+  const cats = s.categories.filter((c) => c.kind === "expense");
+  openSheet({
+    title: "Límites del mes",
+    wide: true,
+    body: `
+      <p class="hint">Cuánto quieres gastar como máximo cada mes (tu parte). Deja vacío para no ponerle límite.</p>
+      <button type="button" class="btn full" id="limSuggest">${icon("sliders-horizontal")}<span>Llenar con mi promedio de 6 meses</span></button>
+      <div class="lim-form">${cats.map((c) => `<label class="lf-row"><span class="lf-name">${esc(c.name)}</span>${numInput("lim_" + c.id, lim[c.id] || "", "Sin límite")}</label>`).join("")}</div>`,
+    onMount: (form) => {
+      form.querySelector("#limSuggest").addEventListener("click", async () => {
+        const { analysis } = await import("./calc.js");
+        const { brandFor } = await import("./logos.js");
+        const { monthStats } = await import("./calc.js");
+        const { monthKey, today } = await import("./format.js");
+        const A = analysis(S(), 6, brandFor, { noExtra: true });
+        // lo ya comprometido este mes (p. ej. mensualidades MSI) también cuenta
+        const now = Object.fromEntries(monthStats(S(), monthKey(today())).cats.map((c) => [c.id, c.amount]));
+        for (const c of A.cats) {
+          const inp = form.elements["lim_" + c.id];
+          const base = Math.max(c.mine / 6, now[c.id] || 0);
+          if (inp && !inp.value && base >= 150 && c.id !== "c_otros") inp.value = Math.ceil(base / 100) * 100;
+        }
+        toast("Listo: ajusta los que quieras");
+      });
+    },
+    onSubmit: (form, fd) => {
+      const out = {};
+      for (const c of cats) { const v = parseAmount(fd.get("lim_" + c.id) || ""); if (v > 0) out[c.id] = v; }
+      s.settings.limits = out;
+      st.save();
+      done("Límites guardados");
+    },
+  });
+}

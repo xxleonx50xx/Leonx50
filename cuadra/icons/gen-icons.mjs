@@ -7,12 +7,12 @@ import { writeFileSync } from "node:fs";
 const draw = (size, maskable) => `
   const c = document.createElement('canvas'); c.width=${size}; c.height=${size};
   const x = c.getContext('2d'); const s=${size};
-  x.fillStyle='#0b0d0c';
+  x.fillStyle='#0a0b09';
   ${maskable ? `x.fillRect(0,0,s,s);` : `x.beginPath(); x.roundRect(0,0,s,s,s*0.22); x.fill();`}
   const k = ${maskable ? 0.78 : 1};
   const w = s*0.5*k, h = s*0.095*k, r = h/2, cx = s/2, gap = s*0.085*k;
   const bar = (y) => {
-    x.fillStyle='#2fb67c';
+    x.fillStyle='#9cab6a';
     x.beginPath(); x.roundRect(cx-w/2, y, w, h, r); x.fill();
   };
   bar(s/2 - gap - h/2 - h/2 + h*0.0);

@@ -450,3 +450,28 @@ export function subInfo(S, x, brandFor) {
   return { next, last, days, status, monthly: r2(subMonthly(x)) };
 }
 function daysBetweenLocal(a, b) { return Math.round((parseYmd(b) - parseYmd(a)) / 86400000); }
+
+// ---------- Límites mensuales por categoría ----------
+export function limitsStatus(S, key) {
+  const lim = S.settings.limits || {};
+  const ms = monthStats(S, key);
+  const spentBy = Object.fromEntries(ms.cats.map((c) => [c.id, c.amount]));
+  const cur = monthKey(today());
+  const d = parseYmd(today());
+  const daysIn = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  const day = key === cur ? d.getDate() : key < cur ? daysIn : 0;
+  const frac = day / daysIn;
+  const rows = Object.entries(lim).filter(([, v]) => Number(v) > 0).map(([id, v]) => {
+    const limit = Number(v), spent = r2(spentBy[id] || 0);
+    const pct = (spent / limit) * 100;
+    const remaining = r2(limit - spent);
+    const pace = frac > 0 ? spent / (limit * frac) : 0; // >1 = vas más rápido que el mes
+    const status = spent > limit ? "over" : pct >= 85 || (key === cur && pace > 1.15 && pct > 30) ? "warn" : "ok";
+    return { id, limit, spent, pct, remaining, pace, status, projected: key === cur && frac > 0 ? r2(spent / frac) : spent };
+  }).sort((a, b) => b.pct - a.pct);
+  const totalLimit = r2(rows.reduce((q, x) => q + x.limit, 0));
+  const totalSpent = r2(rows.reduce((q, x) => q + x.spent, 0));
+  const unlimited = r2(ms.cats.filter((c) => !lim[c.id]).reduce((q, c) => q + c.amount, 0));
+  const daysLeft = key === cur ? daysIn - d.getDate() + 1 : 0;
+  return { rows, totalLimit, totalSpent, unlimited, daysLeft, perDay: daysLeft ? r2(Math.max(0, totalLimit - totalSpent) / daysLeft) : 0, frac, monthSpend: ms.spend };
+}

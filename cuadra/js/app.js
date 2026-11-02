@@ -11,7 +11,9 @@ const QuickBind = () => bindQuick(() => render(), (m, p) => F.openFull(m, p));
 
 const $ = (s) => document.querySelector(s);
 const deskMQ = window.matchMedia("(min-width: 1000px)");
-const ui = { month: monthKey(today()), movFilter: { q: "", type: "", account: "", cat: "", all: false }, corteEnd: null, sort: { key: "date", dir: -1 }, desk: deskMQ.matches };
+let savedView = "list";
+try { savedView = localStorage.getItem("cuadra_movview") || "list"; } catch {}
+const ui = { movView: savedView, month: monthKey(today()), movFilter: { q: "", type: "", account: "", cat: "", all: false }, corteEnd: null, sort: { key: "date", dir: -1 }, desk: deskMQ.matches };
 
 // ---------- Rutas: [regex, vista, pestaña móvil, sección de la barra lateral] ----------
 const routes = [
@@ -28,6 +30,7 @@ const routes = [
   [/^#\/movs$/, () => V.movements(ui), "mas", "movs"],
   [/^#\/analisis$/, () => V.analysisView(ui), "mas", "analisis"],
   [/^#\/suscripciones$/, () => V.subsView(ui), "mas", "subs"],
+  [/^#\/limites$/, () => V.limitsView(ui), "mas", "limites"],
   [/^#\/metas$/, () => V.goals(), "mas", "metas"],
   [/^#\/meta\/(.+)$/, (m) => V.goalDetail(m[1]), "mas", "metas"],
   [/^#\/msi$/, () => V.msiList(ui), "mas", "msi"],
@@ -41,7 +44,7 @@ const TABS = [["inicio", "#/inicio", "layout-dashboard", "Inicio"], ["cuentas", 
 const SIDE = [
   ["inicio", "#/inicio", "layout-dashboard", "Inicio"], ["movs", "#/movs", "list", "Movimientos"], ["cuentas", "#/cuentas", "wallet", "Cuentas"],
   ["casa", "#/casa", "house", "Casa"], ["personas", "#/personas", "users", "Personas"], ["cortes", "#/cortes", "scissors", "Cortes"],
-  ["msi", "#/msi", "calendar", "MSI"], ["subs", "#/suscripciones", "repeat", "Suscripciones"], ["analisis", "#/analisis", "sliders-horizontal", "Análisis"], ["metas", "#/metas", "target", "Metas"], null,
+  ["msi", "#/msi", "calendar", "MSI"], ["subs", "#/suscripciones", "repeat", "Suscripciones"], ["analisis", "#/analisis", "sliders-horizontal", "Análisis"], ["limites", "#/limites", "gauge", "Límites"], ["metas", "#/metas", "target", "Metas"], null,
   ["categorias", "#/categorias", "tag", "Categorías"], ["respaldo", "#/respaldo", "download", "Respaldo"], ["ajustes", "#/ajustes", "settings", "Ajustes"],
 ];
 function buildNav() {
@@ -61,10 +64,10 @@ function render() {
   try { renderNow(); } finally { rendering = false; }
 }
 function applyTheme() {
-  const t = st.state()?.settings.theme || "auto";
-  if (t === "auto") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
+  const t = st.state()?.settings.theme || "dark";
+  document.documentElement.dataset.theme = t;
   const dark = t === "dark" || (t === "auto" && !matchMedia("(prefers-color-scheme: light)").matches);
-  document.querySelector('meta[name="theme-color"]').setAttribute("content", dark ? "#000000" : "#f2f2f7");
+  document.querySelector('meta[name="theme-color"]').setAttribute("content", dark ? "#0a0b09" : "#f3f2ec");
 }
 matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => applyTheme());
 function renderNow() {
@@ -195,6 +198,9 @@ const actions = {
   newSub: () => F.subForm(),
   editSub: (d) => F.subForm(st.byId("subs", d.id)),
   anMonths: (d) => { ui.anMonths = Number(d.n); render(); },
+  editLimits: () => F.limitsForm(),
+  filterCat: (d) => { ui.movFilter.cat = ui.movFilter.cat === d.id ? "" : d.id; render(); },
+  movView: (d) => { ui.movView = d.v; try { localStorage.setItem("cuadra_movview", d.v); } catch {} render(); },
   anExtra: () => { ui.anExtra = ui.anExtra === false; render(); },
   newCat: (d) => F.categoryForm(null, d.kind),
   editCat: (d) => F.categoryForm(st.category(d.id)),
