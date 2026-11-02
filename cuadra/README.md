@@ -66,6 +66,14 @@ Local: `cd cuadra && python3 -m http.server 8080` → http://localhost:8080
 
 Deploy: el workflow de GitHub Pages publica Fastest en la raíz y Cuadra en `/cuadra/`.
 
+### Hostinger
+1. hPanel → **Sitios web → Administrar → Administrador de archivos** → entra a `public_html` (o crea una subcarpeta, p. ej. `public_html/cuadra`).
+2. Sube el `.zip` de Cuadra y elige **Extraer**. Debe quedar `index.html` directo en esa carpeta (junto con `.htaccess`).
+3. Activa el **SSL** gratis del dominio (hPanel → Seguridad → SSL). Sin HTTPS no se puede instalar ni funcionar sin internet.
+4. Abre `https://tudominio.com` (o `/cuadra/`) en Safari → Compartir → Agregar a inicio.
+
+Los datos viven en cada dispositivo: si cambias de dominio, exporta un respaldo en la versión vieja e impórtalo en la nueva.
+
 ## 🔜 Siguientes pasos posibles
 - Sincronizar en la nube (p. ej. Supabase) para usarla en varios dispositivos y que Liz vea los cortes.
 - Importar movimientos históricos del Excel.

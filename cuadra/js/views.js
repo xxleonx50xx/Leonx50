@@ -133,6 +133,44 @@ function groupByDate(list, render) {
 const sortTx = (a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : (b.createdAt || 0) - (a.createdAt || 0));
 
 // ================= INICIO =================
+/** Plástico de tarjeta con el color del banco. */
+export function bankCard(a, C, { compact = false } = {}) {
+  const s = S();
+  const b = brandFor(a.name);
+  const hex = b?.hex || (a.type === "credit" ? "#2a3330" : "#13362a");
+  const credit = a.type === "credit";
+  const ci = credit ? cardInfo(s, a, C) : null;
+  const val = credit ? ci.debt : C.acc[a.id];
+  const stale = !a.lastReconciled || daysBetween(a.lastReconciled, today()) > 7;
+  return `<a class="bcard ${compact ? "compact" : ""}" href="#/cuenta/${a.id}" style="--bc:${hex}">
+    <div class="bc-top">${accountTile(a, "sm")}<span class="bc-name">${esc(a.name)}</span>${stale ? `<span class="bc-flag" title="Sin cuadrar">${icon("scale")}</span>` : `<span class="bc-ok">${icon("circle-check")}</span>`}</div>
+    <div class="bc-mid"><small>${credit ? "Deuda" : ACCOUNT_TYPES[a.type].label}</small><b>${money(val)}</b></div>
+    ${credit && ci.limit ? `<div class="bc-bot"><div class="bc-bar"><i style="width:${ci.usedPct.toFixed(1)}%"></i></div><small>Disponible ${money0(ci.available)}${ci.nextDue ? ` · paga ${fmtDate(ci.nextDue, { plain: true })}` : ""}</small></div>`
+      : `<div class="bc-bot"><small>${a.lastReconciled ? `Cuadrada ${relDays(a.lastReconciled)}` : "Sin cuadrar"}</small></div>`}
+  </a>`;
+}
+
+/** Próximos cobros: pagos de tarjetas, suscripciones, MSI y planes de pago. */
+function upcoming(s, C, days = 14) {
+  const lim = addDaysLocal(today(), days);
+  const ev = [];
+  for (const a of s.accounts.filter((x) => !x.archived && x.type === "credit")) {
+    const ci = cardInfo(s, a, C);
+    if (ci.nextDue && ci.nextDue <= lim && ci.debt > 0) ev.push({ date: ci.nextDue, tile: accountTile(a, "sm"), title: `Pagar ${a.name}`, sub: `Sin MSI + mensualidades ${money0(ci.debtNoMsi + ci.msiMonthly)}`, amount: ci.debt, go: `#/cuenta/${a.id}` });
+    if (ci.nextCut && ci.nextCut <= lim) ev.push({ date: ci.nextCut, tile: accountTile(a, "sm"), title: `Corte ${a.name}`, sub: "Fecha de corte", amount: null, go: `#/cuenta/${a.id}` });
+  }
+  for (const x of (s.subs || []).filter((x) => x.active && x.day)) {
+    const i = subInfo(s, x, brandFor);
+    if (i.next && i.next <= lim) ev.push({ date: i.next, tile: brandFor(x.name) ? logo(brandFor(x.name), "sm") : iconTile("repeat", "", "sm"), title: x.name, sub: x.accountId ? accName(x.accountId) : "Suscripción", amount: Number(x.amount), go: "#/suscripciones" });
+  }
+  for (const p of s.people.filter((p) => p.plan && !p.archived)) {
+    const pi = planInfo(s, p);
+    if (pi?.next && pi.next <= lim) ev.push({ date: pi.next, tile: `<span class="avatar xs">${esc(p.name[0])}</span>`, title: `Pago de ${p.name}`, sub: "Te debe pagar", amount: pi.amount, go: `#/persona/${p.id}`, inc: true });
+  }
+  return ev.sort((a, b) => (a.date < b.date ? -1 : 1));
+}
+function addDaysLocal(d, n) { const x = new Date(d + "T12:00"); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); }
+
 export function home(ui) {
   const s = S();
   const C = compute(s);
@@ -143,98 +181,79 @@ export function home(ui) {
   const assets = active.filter((a) => a.type !== "credit").reduce((x, a) => x + C.acc[a.id], 0);
   const cardDebt = active.filter((a) => a.type === "credit").reduce((x, a) => x + Math.max(0, -C.acc[a.id]), 0);
   const stale = active.filter((a) => !a.lastReconciled || daysBetween(a.lastReconciled, today()) > 7);
-  const backupOld = s.tx.length > 5 && (!s.settings.lastBackup || daysBetween(s.settings.lastBackup, today()) > 7);
+  const backupOld = s.tx.filter((t) => !t.hist).length > 5 && (!s.settings.lastBackup || daysBetween(s.settings.lastBackup, today()) > 7);
+  const p = st.partner();
 
-  const hero = `
-    <div class="hero">
-      <div class="hero-top"><span>Patrimonio neto</span>${icon("info", "dim")}</div>
-      <div class="big">${money(C.netWorth)}</div>
-      <div class="hero-row">
-        <a href="#/cuentas"><small>Tengo</small><b>${money0(assets)}</b></a>
-        <a href="#/cuentas"><small>Debo en tarjetas</small><b class="neg">${money0(cardDebt)}</b></a>
+  // 1. Encabezado con patrimonio
+  const head = `
+    <section class="nw">
+      <small>Patrimonio neto</small>
+      <div class="nw-big ${C.netWorth < 0 ? "neg" : ""}">${money(C.netWorth)}</div>
+      <div class="nw-row">
+        <a href="#/cuentas"><small>Tengo</small><b>${money0(assets)}</b></a><i></i>
+        <a href="#/cuentas"><small>Debo</small><b class="neg">${money0(cardDebt)}</b></a><i></i>
         <a href="#/personas"><small>Me deben</small><b class="pos">${money0(C.owedToMe)}</b></a>
       </div>
-    </div>`;
+    </section>`;
+  // 2. Cartera
+  const order = ["debit", "cash", "credit", "fund", "savings"];
+  const accs = [...active].sort((a, b) => order.indexOf(a.type) - order.indexOf(b.type) || Math.abs(C.acc[b.id]) - Math.abs(C.acc[a.id]));
+  const wallet = `<section class="wallet-sec"><div class="sec-h"><h3>Mis cuentas</h3><a class="sec-link" href="#/cuadrar">${icon("scale")} Cuadrar${stale.length ? ` (${stale.length})` : ""}</a></div>
+    <div class="wallet">${accs.map((a) => bankCard(a, C)).join("")}<a class="bcard add" href="#/cuentas">${icon("plus")}<span>Ver todas</span></a></div></section>`;
+  // 3. Acciones
+  const quick = `<div class="actions-row">
+    <button data-act="add" data-kind="expense"><span>${icon("receipt")}</span>Gasto</button>
+    ${p ? `<button data-act="add" data-kind="house"><span>${icon("house")}</span>Casa</button>` : ""}
+    <button data-act="add" data-kind="payment"><span>${icon("credit-card")}</span>Pagar</button>
+    <button data-act="add" data-kind="income"><span>${icon("arrow-down-left")}</span>Ingreso</button>
+  </div>`;
   let alerts = "";
   if (backupOld) alerts += `<a class="banner warn" href="#/respaldo">${icon("triangle-alert")}<span>Haz un respaldo — ${s.settings.lastBackup ? `el último fue ${relDays(s.settings.lastBackup)}` : "aún no tienes ninguno"}</span></a>`;
-  if (stale.length) alerts += `<a class="banner" href="#/cuadrar">${icon("scale")}<span>${stale.length === 1 ? `Cuadra ${esc(stale[0].name)}` : `${stale.length} cuentas sin cuadrar esta semana`}</span><em>Cuadrar ${icon("arrow-right")}</em></a>`;
-
-  // accesos rápidos (móvil)
-  const quick = `<div class="quick-row">
-    <button data-act="add" data-kind="expense">${iconTile("receipt", "accent")}<span>Gasto</span></button>
-    ${st.partner() ? `<button data-act="add" data-kind="house">${iconTile("house", "accent")}<span>Casa</span></button>` : ""}
-    <button data-act="add" data-kind="payment">${iconTile("credit-card", "accent")}<span>Pagar tarjeta</span></button>
-    <a href="#/cuadrar">${iconTile("scale", "accent")}<span>Cuadrar</span></a>
-  </div>`;
-
-  // pareja
-  const p = st.partner();
+  // 4. Este mes vs promedio
+  const A = analysis(s, 6, brandFor);
+  const curM = A.byMonth[A.cur];
+  const ms = monthStats(s, ui.month);
+  const pace = A.avg ? (curM.spend / A.avg) * 100 : 0;
+  const dayPct = (new Date().getDate() / new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()) * 100;
+  const month = `<a class="card month-card" href="#/analisis">
+    <div class="mc-top"><span>${fmtMonth(A.cur)}</span>${icon("chevron-right", "dim")}</div>
+    <div class="mc-big">${money0(curM.spend)} <small>gastado</small></div>
+    <div class="pace"><div class="bar ${pace > dayPct + 10 ? "hot" : ""}"><i style="width:${Math.min(100, pace).toFixed(1)}%"></i></div><span class="pace-mark" style="left:${dayPct.toFixed(1)}%"></span></div>
+    <div class="mc-foot"><span>Promedio mensual ${money0(A.avg)}</span><span>Tu parte ${money0(ms.spend)}</span></div>
+  </a>`;
+  // 5. Pareja
   let partner = "";
   if (p) {
     const start = openCorteStart(s);
     const end = corteDefaultEnd(start, s.settings.corteFreq);
-    const sum = corteSummary(s, start, today() > end ? end : today());
     const bal = C.ppl[p.id];
     const due = today() > end;
-    partner = `<a class="card partner" href="#/cortes">
-      <div class="pc-top"><span class="avatar">${esc(p.name[0] || "?")}</span><div><b>Corte con ${esc(p.name)}</b><small>${fmtRange(start, end)}${due ? ` · <em class="warn-t">toca cortar</em>` : ""}</small></div>${icon("chevron-right", "dim")}</div>
-      <div class="pc-amt ${moneyCls(bal)}"><small>${Math.abs(bal) < 0.01 ? "Están a mano" : bal > 0 ? `${esc(p.name)} te debe` : `Le debes a ${esc(p.name)}`}</small><b>${money(Math.abs(bal))}</b></div>
-      <div class="pc-foot">Este corte ${moneySigned(sum.change)} · ${sum.items.length} movimientos</div>
-    </a>`;
+    partner = `<a class="card row-card" href="#/cortes"><span class="avatar">${esc(p.name[0])}</span>
+      <div class="mid"><b>Corte con ${esc(p.name)}</b><small>${fmtRange(start, end)}${due ? ` · <em class="warn-t">toca cortar</em>` : ""}</small></div>
+      <div class="end"><b class="${moneyCls(bal)}">${money(Math.abs(bal))}</b><small>${Math.abs(bal) < 0.01 ? "a mano" : bal > 0 ? "te debe" : "le debes"}</small></div></a>`;
   }
-
-  // mes
-  const ms = monthStats(s, ui.month);
-  const top = ms.cats.slice(0, 6);
-  const maxC = top[0]?.amount || 1;
-  const month = section("Mi mes", `
-    <div class="card">
-      <div class="month-nav"><button data-act="month" data-d="-1">${icon("chevron-left")}</button><b>${fmtMonth(ui.month)}</b><button data-act="month" data-d="1">${icon("chevron-right")}</button></div>
-      <div class="stats3">
-        <div><small>Gasté (mi parte)</small><b>${money0(ms.spend)}</b></div>
-        <div><small>Ingresos</small><b class="pos">${money0(ms.income)}</b></div>
-        <div><small>Balance</small><b class="${moneyCls(ms.net)}">${money0(ms.net)}</b></div>
-      </div>
-      ${top.length ? `<div class="cats">${top.map((c) => {
-        const cat = catOf(c.id);
-        return `<div class="cat-row">${categoryTile(cat, "xs")}<span>${cat ? esc(cat.name) : "Sin categoría"}</span><b>${money0(c.amount)}</b>${bar((c.amount / maxC) * 100)}</div>`;
-      }).join("")}</div>` : `<p class="muted center">Sin gastos este mes.</p>`}
-      <p class="fine">Sin pagos a tarjetas ni lo que te deben otros. Incluye tu parte de MSI (${money0(ms.msiMine)}).</p>
-    </div>`);
-
-  // casa
+  // 6. Próximos cobros
+  const up = upcoming(s, C);
+  const agenda = up.length ? section("Próximos 14 días", `<div class="card list">${up.slice(0, 8).map((e) => `<a class="row" href="${e.go}">${e.tile}
+      <div class="mid"><div class="t1">${esc(e.title)}</div><div class="t2">${esc(e.sub)}</div></div>
+      <div class="end"><span class="date-chip ${e.date === today() ? "today" : ""}">${fmtDate(e.date)}</span>${e.amount != null ? `<small class="${e.inc ? "pos" : ""}">${money0(e.amount)}</small>` : ""}</div></a>`).join("")}</div>`) : "";
+  // 7. Casa
   let house = "";
   if (p) {
     const hs = houseStats(s, monthKey(today()));
-    house = section("Gastos de casa", `<a class="card" href="#/casa">
-      <div class="stats3"><div><small>Este mes</small><b>${money0(hs.sum.total)}</b></div><div><small>Mi parte</small><b>${money0(hs.sum.mine)}</b></div><div><small>${esc(p.name)}</small><b>${money0(hs.sum.theirs)}</b></div></div>
-      ${hs.budgetTotal ? bar((hs.sum.total / hs.budgetTotal) * 100, hs.sum.total > hs.budgetTotal ? "hot" : "") + `<p class="fine">${money0(hs.sum.total)} de ${money0(hs.budgetTotal)} presupuestados</p>` : ""}
-    </a>`, link("Ver", "#/casa"));
+    house = `<a class="card row-card" href="#/casa">${iconTile("house", "accent")}
+      <div class="mid"><b>Gastos de casa</b><small>${money0(hs.sum.total)}${hs.budgetTotal ? ` de ${money0(hs.budgetTotal)}` : ""} · tú ${money0(hs.sum.mine)} · ${esc(p.name)} ${money0(hs.sum.theirs)}</small>${hs.budgetTotal ? bar((hs.sum.total / hs.budgetTotal) * 100, hs.sum.total > hs.budgetTotal ? "hot" : "") : ""}</div></a>`;
   }
-
-  // tarjetas
-  const soon = active.filter((a) => a.type === "credit").map((a) => ({ a, ci: cardInfo(s, a, C) }))
-    .filter(({ ci }) => (ci.nextDue && daysBetween(today(), ci.nextDue) <= 10 && ci.debt > 0) || (ci.nextCut && daysBetween(today(), ci.nextCut) <= 5))
-    .sort((x, y) => ((x.ci.nextDue || "9") < (y.ci.nextDue || "9") ? -1 : 1));
-  const cards = soon.length ? section("Tarjetas: cortes y pagos", `<div class="card list">${soon.map(({ a, ci }) => `
-      <a class="row" href="#/cuenta/${a.id}">${accountTile(a)}<div class="mid"><div class="t1">${esc(a.name)}</div>
-      <div class="t2">${ci.nextDue ? `Pago ${fmtDate(ci.nextDue)} (${relDays(ci.nextDue)})` : ""}${ci.nextCut ? ` · corte ${relDays(ci.nextCut)}` : ""}</div></div>
-      <div class="end"><b class="amt">${money(ci.debt)}</b></div></a>`).join("")}</div>`) : "";
-
-  const actSubs = (s.subs || []).filter((x) => x.active);
-  const subsCard = actSubs.length ? section("Suscripciones", `<a class="card" href="#/suscripciones">
-      <div class="stats2"><div><small>Al mes</small><b>${money(actSubs.reduce((q, x) => q + subMonthly(x), 0))}</b></div><div><small>Por revisar</small><b class="${actSubs.some((x) => subInfo(s, x, brandFor).status !== "ok") ? "warn-t" : ""}">${actSubs.filter((x) => subInfo(s, x, brandFor).status !== "ok").length}</b></div></div>
-      <div class="logo-strip">${actSubs.slice(0, 8).map((x) => brandFor(x.name) ? logo(brandFor(x.name), "xs") : iconTile("repeat", "", "xs")).join("")}</div></a>`, link("Ver", "#/suscripciones")) : "";
-  const goals = s.goals.length ? section("Metas de ahorro", `<div class="card list">${s.goals.slice(0, 3).map((g) => goalRow(g, C)).join("")}</div>`, link("Ver todas", "#/metas")) : "";
+  const goals = s.goals.length ? section("Metas", `<div class="card list">${s.goals.slice(0, 3).map((g) => goalRow(g, C)).join("")}</div>`, link("Ver todas", "#/metas")) : "";
   const recent = [...s.tx].sort(sortTx).slice(0, ui.desk ? 10 : 6);
   const recentHtml = section("Últimos movimientos", recent.length
     ? ui.desk ? table(TX_COLS.map((c) => ({ ...c, sort: null })), recent.map((t) => txTableRow(t))) : `<div class="card list">${recent.map((t) => txRow(t)).join("")}</div>`
     : `<p class="muted">Aún no hay movimientos. Toca ＋ para registrar.</p>`, link("Ver todos", "#/movs"));
 
   const html = ui.desk
-    ? `${alerts}<div class="dash"><div class="dash-a">${hero}${partner}${house}${subsCard}</div><div class="dash-b">${month}${cards}${goals}</div></div>${recentHtml}`
-    : `${hero}${alerts}${quick}${partner}${house}${month}${cards}${subsCard}${goals}${recentHtml}`;
-  return { title: `Hola${s.settings.name ? ", " + s.settings.name : ""}`, html };
+    ? `${alerts}<div class="dash"><div>${head}${month}${partner}${house}</div><div>${agenda || section("Próximos 14 días", `<p class="muted">Nada pendiente.</p>`)}</div></div>${wallet}${goals}${recentHtml}`
+    : `${head}${alerts}${wallet}${quick}${month}${partner}${house}${agenda}${goals}${recentHtml}`;
+  return { title: `Hola${s.settings.name ? ", " + s.settings.name : ""}`, html, cls: "home" };
 }
 
 // ================= CUENTAS =================
@@ -274,7 +293,7 @@ export function accounts(ui) {
       const list = active.filter((a) => a.type === g);
       if (!list.length) continue;
       const total = list.reduce((x, a) => x + naturalBalance(a, C.acc[a.id]), 0);
-      html += section(ACCOUNT_TYPES[g].plural, `<div class="card list">${list.map((a) => accountRow(a, C)).join("")}</div>`, `<span class="sec-sum ${g === "credit" ? "neg" : ""}">${money(total)}</span>`);
+      html += section(ACCOUNT_TYPES[g].plural, `<div class="bcard-grid">${list.map((a) => bankCard(a, C, { compact: true })).join("")}</div>`, `<span class="sec-sum ${g === "credit" ? "neg" : ""}">${money(total)}</span>`);
     }
   }
   const arch = s.accounts.filter((a) => a.archived);

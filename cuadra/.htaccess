@@ -1,0 +1,22 @@
+# ===== Cuadra en Hostinger (Apache / LiteSpeed) =====
+Options -Indexes
+
+# Siempre HTTPS (necesario para instalar la app y que funcione sin internet)
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} !=on
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+AddType application/manifest+json .webmanifest
+AddType text/javascript .js
+
+# Que el teléfono siempre pida la versión nueva del código
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|js|css|webmanifest)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+  <FilesMatch "\.png$">
+    Header set Cache-Control "public, max-age=604800"
+  </FilesMatch>
+</IfModule>
