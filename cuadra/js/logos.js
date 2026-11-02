@@ -43,4 +43,13 @@ export function logo(b, size = "") {
 
 /** Ficha con ícono de línea (tono neutro o de acento). */
 export const iconTile = (name, tone = "", size = "") => `<span class="tile ${tone} ${size}">${icon(name)}</span>`;
+/** Cuadrito de color con ícono blanco (como en Ajustes de iPhone). */
+export const colorTile = (name, color, size = "") => `<span class="tile solid ${size}" style="--tc:${color}">${icon(name)}</span>`;
+export const APPLE = { red: "#FF453A", orange: "#FF9F0A", yellow: "#FFCC00", green: "#30D158", mint: "#00C7BE", teal: "#30B0C7", cyan: "#32ADE6", blue: "#0A84FF", indigo: "#5E5CE6", purple: "#BF5AF2", pink: "#FF375F", brown: "#A2845E", gray: "#8E8E93" };
+export const CAT_COLOR = {
+  c_super: APPLE.green, c_rest: APPLE.orange, c_gas: APPLE.red, c_trans: APPLE.yellow, c_serv: APPLE.cyan, c_renta: APPLE.indigo,
+  c_casa: APPLE.brown, c_subs: APPLE.pink, c_auto: APPLE.blue, c_salud: APPLE.red, c_seguro: APPLE.teal, c_gym: APPLE.orange,
+  c_ropa: APPLE.purple, c_elec: APPLE.gray, c_regalo: APPLE.pink, c_viaje: APPLE.blue, c_trabajo: APPLE.indigo, c_boda: APPLE.purple, c_otros: APPLE.gray,
+  i_trabajo: APPLE.green, i_bono: APPLE.yellow, i_venta: APPLE.teal, i_regalo: APPLE.pink, i_aporte: APPLE.indigo, i_reemb: APPLE.gray, i_otro: APPLE.gray,
+};
 export const emojiTile = (e, size = "") => `<span class="tile emoji ${size}">${e}</span>`;

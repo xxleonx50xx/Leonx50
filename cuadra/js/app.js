@@ -60,7 +60,15 @@ function render() {
   rendering = true;
   try { renderNow(); } finally { rendering = false; }
 }
+function applyTheme() {
+  const t = st.state()?.settings.theme || "auto";
+  if (t === "auto") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
+  const dark = t === "dark" || (t === "auto" && !matchMedia("(prefers-color-scheme: light)").matches);
+  document.querySelector('meta[name="theme-color"]').setAttribute("content", dark ? "#000000" : "#f2f2f7");
+}
+matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => applyTheme());
 function renderNow() {
+  applyTheme();
   if (!st.hasData()) return renderWelcome();
   $("#app").classList.remove("hidden");
   $("#welcome").classList.add("hidden");
@@ -244,6 +252,7 @@ document.addEventListener("change", (e) => {
     else s.settings[k] = v || null;
     if (k === "name") s.settings.name = v.trim();
     st.save();
+    if (k === "theme") render();
     toast("Guardado");
   }
 });

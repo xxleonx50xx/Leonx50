@@ -10,7 +10,7 @@ import {
   fundStats, goalProgress, naturalBalance, txAccountEffects, EVENT_LABEL, houseStats, houseLine, isHouse, categoriesByUse,
   analysis, subInfo, subMonthly,
 } from "./calc.js";
-import { icon, brandFor, logo, iconTile } from "./logos.js";
+import { icon, brandFor, logo, iconTile, colorTile, APPLE, CAT_COLOR } from "./logos.js";
 import { accountTile, categoryTile } from "./quick.js";
 
 const S = () => st.state();
@@ -395,7 +395,9 @@ export function accountDetail(id, ui) {
     list = `<div class="card list">${shown.length ? groupByDate(shown, (e) => (e.t ? txRow(e.t, { accountId: a.id, running: naturalBalance(a, e.run) }) : msiInfoRow(e.m, C))) : `<p class="muted center pad">Sin movimientos.</p>`}
       <div class="row static">${iconTile("flag")}<div class="mid"><div class="t1">Saldo inicial</div><div class="t2">${a.initialDate ? fmtDate(a.initialDate) : ""}</div></div><div class="end"><b class="amt">${money(naturalBalance(a, Number(a.initial) || 0))}</b></div></div></div>`;
   }
-  return { title: a.name, back: true, action: `<button class="icon-btn" data-act="editAccount" data-id="${a.id}" aria-label="Editar">${icon("pencil")}</button>`, html: head + section("Movimientos", list) };
+  const hist = s.tx.filter((t) => t.hist && (t.accountId === a.id || t.toAccountId === a.id)).sort(sortTx).slice(0, 150);
+  const histHtml = hist.length ? section(`Historial del Excel`, (ui.desk ? table(TX_COLS.map((c) => ({ ...c, sort: null })), hist.map((t) => txTableRow(t))) : `<div class="card list">${groupByDate(hist, (t) => txRow(t))}</div>`) + `<p class="fine">Movimientos importados de tu Excel. El saldo de arriba ya está cuadrado con tu hoja Resumen.</p>`) : "";
+  return { title: a.name, back: true, action: `<button class="icon-btn" data-act="editAccount" data-id="${a.id}" aria-label="Editar">${icon("pencil")}</button>`, html: head + section("Movimientos", list) + histHtml };
 }
 
 // ================= GASTOS DE CASA =================
@@ -605,20 +607,20 @@ export function cortes(ui) {
 export function more() {
   const s = S();
   const items = [
-    ["#/personas", "users", "Personas y deudas", `${s.people.filter((p) => !p.archived).length} personas`],
-    ["#/cortes", "scissors", "Cortes con tu pareja", st.partner()?.name || "Sin configurar"],
-    ["#/movs", "list", "Movimientos", `${s.tx.length} registrados`],
-    ["#/fondo", "house-plus", "Fondo común", s.settings.fund.accountId ? accName(s.settings.fund.accountId) : "Sin configurar"],
-    ["#/analisis", "sliders-horizontal", "Análisis y promedios", "Cuánto gastas en promedio"],
-    ["#/suscripciones", "repeat", "Suscripciones", `${(s.subs || []).filter((x) => x.active).length} activas`],
-    ["#/metas", "target", "Metas de ahorro", `${s.goals.length} metas`],
-    ["#/msi", "calendar", "Meses sin intereses", `${s.msi.filter((m) => !msiInfo(m).done).length} vigentes`],
-    ["#/cuadrar", "scale", "Cuadrar cuentas", ""],
-    ["#/categorias", "tag", "Categorías", ""],
-    ["#/respaldo", "download", "Respaldo", s.settings.lastBackup ? `último ${fmtDate(s.settings.lastBackup)}` : "nunca"],
-    ["#/ajustes", "settings", "Ajustes", ""],
+    ["#/personas", "users", "Personas y deudas", `${s.people.filter((p) => !p.archived).length} personas`, APPLE.blue],
+    ["#/cortes", "scissors", "Cortes con tu pareja", st.partner()?.name || "Sin configurar", APPLE.pink],
+    ["#/movs", "list", "Movimientos", `${s.tx.length} registrados`, APPLE.gray],
+    ["#/analisis", "sliders-horizontal", "Análisis y promedios", "Cuánto gastas en promedio", APPLE.indigo],
+    ["#/suscripciones", "repeat", "Suscripciones", `${(s.subs || []).filter((x) => x.active).length} activas`, APPLE.red],
+    ["#/fondo", "house-plus", "Fondo común", s.settings.fund.accountId ? accName(s.settings.fund.accountId) : "Sin configurar", APPLE.brown],
+    ["#/metas", "target", "Metas de ahorro", `${s.goals.length} metas`, APPLE.green],
+    ["#/msi", "calendar", "Meses sin intereses", `${s.msi.filter((m) => !msiInfo(m).done).length} vigentes`, APPLE.orange],
+    ["#/cuadrar", "scale", "Cuadrar cuentas", "", APPLE.teal],
+    ["#/categorias", "tag", "Categorías", "", APPLE.purple],
+    ["#/respaldo", "download", "Respaldo", s.settings.lastBackup ? `último ${fmtDate(s.settings.lastBackup)}` : "nunca", APPLE.cyan],
+    ["#/ajustes", "settings", "Ajustes", "", APPLE.gray],
   ];
-  return { title: "Más", html: `<div class="card list">${items.map(([h, i, t, sub]) => `<a class="row" href="${h}">${iconTile(i, "accent")}<div class="mid"><div class="t1">${t}</div>${sub ? `<div class="t2">${esc(sub)}</div>` : ""}</div>${icon("chevron-right", "dim")}</a>`).join("")}</div>
+  return { title: "Más", html: `<div class="card list">${items.map(([h, i, t, sub, col]) => `<a class="row" href="${h}">${colorTile(i, col, "sm")}<div class="mid"><div class="t1">${t}</div>${sub ? `<div class="t2">${esc(sub)}</div>` : ""}</div>${icon("chevron-right", "dim")}</a>`).join("")}</div>
     <p class="fine pad center">Cuadra · tus datos viven en este dispositivo</p>` };
 }
 
@@ -806,6 +808,7 @@ export function settings() {
   const ppl = s.people.filter((p) => !p.archived);
   const html = `
     <div class="card form">
+      <label class="field"><span class="lbl">Apariencia</span><select data-setting="theme">${[["auto", "Automática (como tu iPhone)"], ["dark", "Oscura"], ["light", "Clara"]].map(([v, l]) => `<option value="${v}" ${(st2.theme || "auto") === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>
       <label class="field"><span class="lbl">Tu nombre</span><input data-setting="name" value="${esc(st2.name)}" placeholder="Fer"/></label>
       <label class="field"><span class="lbl">Tu pareja</span><select data-setting="partnerId"><option value="">— Ninguna —</option>${ppl.map((p) => `<option value="${p.id}" ${st2.partnerId === p.id ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label>
       <label class="field"><span class="lbl">% que paga tu pareja en gastos compartidos</span><input data-setting="partnerPct" inputmode="decimal" value="${st2.partnerPct}"/></label>
@@ -851,6 +854,14 @@ export function analysisView(ui) {
     </div></div><div>
     ${section("Mes a mes", `<div class="card">${chart}</div>`)}
     </div></div>`;
+  // tarjetas de estadísticas (estilo app Salud)
+  const statCats = A.cats.filter((c) => c.id !== "_" && c.id !== "c_otros").slice(0, 8);
+  const statTile = (ico, color, label, value, sub) => `<div class="stat">${colorTile(ico, color, "xs")}<small>${label}</small><b>${value}</b><span>${sub}</span></div>`;
+  html += section("Promedios al mes", `<div class="stats-grid">
+    ${statTile("arrow-down-left", APPLE.green, "Ingreso por trabajo", money0(A.avgWork), `mediana ${money0(A.medianWork)}`)}
+    ${statTile("receipt", APPLE.orange, "Gasto total", money0(A.avg), `tu parte ${money0(A.avgMine)}`)}
+    ${statCats.map((c) => { const cat = catOf(c.id); return statTile(cat?.ico || "package", CAT_COLOR[c.id] || APPLE.gray, esc(cat?.name || "Otros"), money0(c.avg), `tu parte ${money0(c.mine / n)}`); }).join("")}
+  </div>`);
   const top = A.merchants.slice(0, ui.desk ? 40 : 15);
   const tileFor = (m) => (brandFor(m.name) ? logo(brandFor(m.name), "xs") : m.sample?.categoryId ? categoryTile(catOf(m.sample.categoryId), "xs") : iconTile("receipt", "", "xs"));
   html += section("¿En qué se va? · por comercio", ui.desk

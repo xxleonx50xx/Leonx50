@@ -352,7 +352,7 @@ export function houseStats(S, key) {
 export function categoriesByUse(S, kind) {
   const n = {};
   for (const t of S.tx) if (t.categoryId) n[t.categoryId] = (n[t.categoryId] || 0) + 1;
-  return S.categories.filter((c) => c.kind === kind).map((c, i) => ({ c, n: n[c.id] || 0, i })).sort((a, b) => b.n - a.n || a.i - b.i).map((x) => x.c);
+  return S.categories.filter((c) => c.kind === kind).map((c, i) => ({ c, n: n[c.id] || 0, i })).sort((a, b) => (a.c.id === "c_otros") - (b.c.id === "c_otros") || b.n - a.n || a.i - b.i).map((x) => x.c);
 }
 
 // ---------- Análisis de varios meses ----------

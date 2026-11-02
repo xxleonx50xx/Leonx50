@@ -5,7 +5,7 @@ import { uid, ACCOUNT_TYPES } from "./store.js";
 import { esc, money, parseAmount, round2, today, fmtDate } from "./format.js";
 import { openSheet, closeSheet, toast } from "./ui.js";
 import { compute, naturalBalance, categoriesByUse } from "./calc.js";
-import { icon, brandFor, logo, iconTile } from "./logos.js";
+import { icon, brandFor, logo, iconTile, colorTile, CAT_COLOR, APPLE } from "./logos.js";
 
 let refresh = () => {};
 let openFull = () => {};
@@ -18,7 +18,7 @@ export function accountTile(a, size = "") {
 }
 export function categoryTile(c, size = "") {
   if (!c) return iconTile("package", "", size);
-  return c.ico ? iconTile(c.ico, "accent", size) : `<span class="tile emoji ${size}">${esc(c.icon || "•")}</span>`;
+  return c.ico ? colorTile(c.ico, CAT_COLOR[c.id] || APPLE.gray, size) : `<span class="tile emoji ${size}">${esc(c.icon || "•")}</span>`;
 }
 
 const KEYS = ["1", "2", "3", "back", "4", "5", "6", "+", "7", "8", "9", "save", ".", "0", "00"];
