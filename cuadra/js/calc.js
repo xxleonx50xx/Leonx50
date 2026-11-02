@@ -185,6 +185,7 @@ export function monthStats(S, key) {
   const add = (cat, v) => { byCat[cat || "_"] = (byCat[cat || "_"] || 0) + v; spend += v; };
   for (const t of S.tx) {
     if (monthKey(t.date) !== key) continue;
+    if (t.type === "expense" && t.excluded) continue; // bono compartido / lo paga Ad Center
     if (t.type === "expense") {
       if (t.accountId === fundId) { fundSpend += Number(t.amount); continue; }
       const mine = Number(t.amount) - (t.shares || []).reduce((s, x) => s + Number(x.amount || 0), 0);
@@ -375,7 +376,7 @@ export function analysis(S, n, brandFor, { noExtra = false } = {}) {
   const fundId = S.settings.fund.accountId;
   const byMonth = Object.fromEntries([...months, cur].map((m) => [m, { spend: 0, mine: 0, work: 0, income: 0 }]));
   const mer = {}, cat = {}, card = {};
-  let spend = 0, mine = 0, others = 0, work = 0, income = 0, subsSeen = 0, count = 0, extras = 0;
+  let spend = 0, mine = 0, others = 0, work = 0, income = 0, subsSeen = 0, count = 0, extras = 0, bonusIn = 0, bonusOut = 0;
   const addSpend = (t, m, amount, myPart, accountId, catId, key) => {
     byMonth[m].spend += amount; byMonth[m].mine += myPart;
     if (!set.has(m)) return;
@@ -391,6 +392,7 @@ export function analysis(S, n, brandFor, { noExtra = false } = {}) {
   for (const t of S.tx) {
     const m = monthKey(t.date);
     if (!byMonth[m]) continue;
+    if (t.type === "expense" && t.excluded) { if (set.has(m) && t.bonusShare) bonusOut += Number(t.amount); continue; }
     if (t.type === "expense" && noExtra && t.extra) { if (set.has(m)) extras += Number(t.amount); continue; }
     if (t.type === "expense" && !(t.accountId === fundId && !t.hist)) {
       const sh = (t.shares || []).reduce((q, x) => q + Number(x.amount || 0), 0);
@@ -400,7 +402,7 @@ export function analysis(S, n, brandFor, { noExtra = false } = {}) {
       if (c && c.real === false) continue;
       byMonth[m].income += Number(t.amount);
       if (t.categoryId === "i_trabajo") byMonth[m].work += Number(t.amount);
-      if (set.has(m)) { income += Number(t.amount); if (t.categoryId === "i_trabajo") work += Number(t.amount); }
+      if (set.has(m)) { income += Number(t.amount); if (t.categoryId === "i_trabajo") work += Number(t.amount); if (t.categoryId === "i_bono") bonusIn += Number(t.amount); }
     }
   }
   for (const pl of S.msi) {
@@ -418,6 +420,7 @@ export function analysis(S, n, brandFor, { noExtra = false } = {}) {
   const median = workMonths.length ? (workMonths[Math.floor((workMonths.length - 1) / 2)] + workMonths[Math.ceil((workMonths.length - 1) / 2)]) / 2 : 0;
   return {
     months, cur, byMonth, count, extras: r2(extras), avgExtras: r2(extras / N),
+    bonusIn: r2(bonusIn), bonusOut: r2(bonusOut), avgBonusNet: r2((bonusIn - bonusOut) / N),
     spend: r2(spend), avg: r2(spend / N), mine: r2(mine), avgMine: r2(mine / N), avgOthers: r2(others / N),
     work: r2(work), avgWork: r2(work / N), medianWork: r2(median), avgIncome: r2(income / N),
     saving: r2(work / N - mine / N),

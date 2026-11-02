@@ -136,6 +136,7 @@ export function expenseForm(t = null, preset = {}) {
         </div>
       </div>` : ""}
       ${toggle("extra", "Gasto extraordinario", !!v.extra, "Viaje grande, boda, reparación… no cuenta en tu promedio")}
+      ${toggle("excluded", "No es gasto mío", !!v.excluded, "Mitad de un bono que compartes, o algo que paga Ad Center")}
       ${field("Nota", textInput("note", v.note, "Opcional"))}`,
     extraButtons: t ? [{ label: "Eliminar", cls: "danger", onClick: () => delTx(t) }] : [],
     onMount: (form) => {
@@ -162,7 +163,7 @@ export function expenseForm(t = null, preset = {}) {
       const shares = readSplit(fd);
       if (shares === null) return toast("Elige la persona"), false;
       s.settings.lastAccountId = accountId;
-      const base = { concept: fd.get("concept").trim(), categoryId: fd.get("categoryId") || "", date: fd.get("date") || today(), note: fd.get("note").trim(), house: !!fd.get("house") || accountId === s.settings.fund.accountId, extra: !!fd.get("extra") };
+      const base = { concept: fd.get("concept").trim(), categoryId: fd.get("categoryId") || "", date: fd.get("date") || today(), note: fd.get("note").trim(), house: !!fd.get("house") || accountId === s.settings.fund.accountId, extra: !!fd.get("extra"), excluded: !!fd.get("excluded"), excludedReason: fd.get("excluded") ? (t?.excludedReason || "No es gasto mío") : undefined };
       if (fd.get("isMsi") && st.account(accountId)?.type === "credit") {
         const acc = st.account(accountId);
         const m = {
@@ -199,6 +200,11 @@ export function incomeForm(t = null, preset = {}) {
       <div data-show-if="categoryId=i_aporte|i_reemb">${field("¿De parte de quién?", select("personId", peopleOptions("Yo"), v.personId))}</div>
       ${field("Fecha", dateInput("date", v.date))}
       <p class="hint" data-show-if="categoryId=i_bono">Un bono en una tarjeta de crédito reduce su deuda.</p>
+      ${!t ? `<div data-show-if="categoryId=i_bono">${toggle("share", "Le paso la mitad a quien referí", false)}
+        <div data-show-if="share=on">
+          <div class="row2">${field("¿A quién?", textInput("shareName", "", "Jonny, Natalia…"))}${field("Monto", numInput("shareAmt", "", "Mitad"))}</div>
+          <div class="field"><span class="lbl">Se lo pasas desde</span>${chips("shareAcc", accountOptions((a) => a.type !== "credit"), defaultAccountId((a) => a.type === "debit") || "", { cls: "scroll" })}</div>
+        </div></div>` : ""}
       <p class="hint" data-show-if="categoryId=i_aporte">Las aportaciones al fondo no cuentan como tu ingreso.</p>`,
     extraButtons: t ? [{ label: "Eliminar", cls: "danger", onClick: () => delTx(t) }] : [],
     onMount: wireConditional,
@@ -214,6 +220,12 @@ export function incomeForm(t = null, preset = {}) {
         personId: ["i_aporte", "i_reemb"].includes(categoryId) ? fd.get("personId") || "" : "",
         shares: [], createdAt: t?.createdAt || Date.now(),
       });
+      if (!t && categoryId === "i_bono" && fd.get("share")) {
+        const half = parseAmount(fd.get("shareAmt") || "") || round2(amount / 2);
+        st.upsert("tx", { id: uid(), type: "expense", amount: half, accountId: fd.get("shareAcc") || defaultAccountId((a) => a.type === "debit"), categoryId: "",
+          concept: `Mitad bono${fd.get("shareName") ? " — " + fd.get("shareName").trim() : ""}`, date: fd.get("date") || today(), excluded: true, bonusShare: true,
+          excludedReason: "Mitad del bono Amex que le pasaste", shares: [], createdAt: Date.now() + 1 });
+      }
       done(accountId === fundId && categoryId === "i_aporte" ? "Aportación registrada" : "Ingreso guardado");
     },
   });

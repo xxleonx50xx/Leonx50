@@ -80,6 +80,7 @@ function splitBadge(t) {
   const out = [];
   if (t.hist) out.push(`<span class="tag">histórico</span>`);
   if (t.extra) out.push(`<span class="tag extra">extraordinario</span>`);
+  if (t.excluded) out.push(`<span class="tag">${esc(t.excludedReason || "no es gasto tuyo")}</span>`);
   if (isHouse(S(), t)) out.push(`<span class="tag house">${icon("house")}Casa</span>`);
   for (const x of t.shares || []) if (x.amount) out.push(`<span class="tag">${esc(pName(x.personId))} ${money0(x.amount)}</span>`);
   if (t.type === "debt" && t.dir === "iOwe" && t.total) out.push(`<span class="tag">tu parte ${money0(t.amount)}</span>`);
@@ -854,6 +855,7 @@ export function analysisView(ui) {
       ${kv("Ingreso mediano por mes", `${money(A.medianWork)} <small>(la mitad de los meses ganas menos que esto)</small>`)}
       ${kv("Lo que te queda (trabajo − tu parte)", `<span class="${moneyCls(A.saving)}">${money(A.saving)}</span> <small>al mes</small>`)}
       ${kv("Este mes vas", `${money0(curM.spend)} <small>de ${money0(A.avg)} promedio</small>`)}
+      ${A.bonusIn ? kv("Bonos de tarjeta (neto)", `<span class="pos">${money0(A.avgBonusNet)}</span> <small>al mes · recibiste ${money0(A.bonusIn)}, compartiste ${money0(A.bonusOut)}</small>`) : ""}
       ${noExtra && A.extras ? kv("Extraordinarios (aparte)", `${money0(A.avgExtras)} <small>al mes · ${money0(A.extras)} en ${n} meses</small>`) : ""}
     </div></div><div>
     ${section("Mes a mes", `<div class="card">${chart}</div>`)}
