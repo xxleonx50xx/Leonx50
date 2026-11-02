@@ -829,6 +829,7 @@ export function settings() {
   const html = `
     <div class="card form">
       <label class="field"><span class="lbl">Apariencia</span><select data-setting="theme">${[["dark", "Oscura (recomendada)"], ["auto", "Automática (como tu iPhone)"], ["light", "Clara"]].map(([v, l]) => `<option value="${v}" ${(st2.theme || "dark") === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+      <label class="field"><span class="lbl">Color principal</span><select data-setting="palette">${[["jade", "Jade"], ["esmeralda", "Esmeralda"], ["salvia", "Salvia"], ["bosque", "Bosque"], ["olivo", "Olivo"]].map(([v, l]) => `<option value="${v}" ${(st2.palette || "jade") === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>
       <label class="field"><span class="lbl">Tu nombre</span><input data-setting="name" value="${esc(st2.name)}" placeholder="Fer"/></label>
       <label class="field"><span class="lbl">Tu pareja</span><select data-setting="partnerId"><option value="">— Ninguna —</option>${ppl.map((p) => `<option value="${p.id}" ${st2.partnerId === p.id ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label>
       <label class="field"><span class="lbl">% que paga tu pareja en gastos compartidos</span><input data-setting="partnerPct" inputmode="decimal" value="${st2.partnerPct}"/></label>

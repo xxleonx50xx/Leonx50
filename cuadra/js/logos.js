@@ -45,7 +45,7 @@ export function logo(b, size = "") {
 export const iconTile = (name, tone = "", size = "") => `<span class="tile ${tone} ${size}">${icon(name)}</span>`;
 /** Cuadrito de color con ícono blanco (como en Ajustes de iPhone). */
 export const colorTile = (name, color, size = "") => `<span class="tile solid ${size}" style="--tc:${color}">${icon(name)}</span>`;
-export const APPLE = { red: "#C2735C", orange: "#C58B4E", yellow: "#C7A64F", green: "#8E9D5B", mint: "#7FA38D", teal: "#6E9A94", cyan: "#7E9DA8", blue: "#6F86A3", indigo: "#7F7FA6", purple: "#957CA0", pink: "#B57A86", brown: "#A3836A", gray: "#7E827A" };
+export const APPLE = { red: "#FF6B5E", orange: "#FF9F43", yellow: "#F7C948", green: "#3DD68C", mint: "#2ED1C4", teal: "#22B8CF", cyan: "#4DABF7", blue: "#5C7CFA", indigo: "#845EF7", purple: "#CC5DE8", pink: "#F06595", brown: "#D4A373", gray: "#A0A4AB" };
 export const CAT_COLOR = {
   c_super: APPLE.green, c_rest: APPLE.orange, c_gas: APPLE.red, c_trans: APPLE.yellow, c_serv: APPLE.cyan, c_renta: APPLE.indigo,
   c_casa: APPLE.brown, c_subs: APPLE.pink, c_auto: APPLE.blue, c_salud: APPLE.red, c_seguro: APPLE.teal, c_gym: APPLE.orange,

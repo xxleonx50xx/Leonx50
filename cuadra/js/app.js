@@ -66,6 +66,7 @@ function render() {
 function applyTheme() {
   const t = st.state()?.settings.theme || "dark";
   document.documentElement.dataset.theme = t;
+  document.documentElement.dataset.palette = st.state()?.settings.palette || "jade";
   const dark = t === "dark" || (t === "auto" && !matchMedia("(prefers-color-scheme: light)").matches);
   document.querySelector('meta[name="theme-color"]').setAttribute("content", dark ? "#0a0b09" : "#f3f2ec");
 }
@@ -259,7 +260,7 @@ document.addEventListener("change", (e) => {
     else s.settings[k] = v || null;
     if (k === "name") s.settings.name = v.trim();
     st.save();
-    if (k === "theme") render();
+    if (k === "theme" || k === "palette") render();
     toast("Guardado");
   }
 });
