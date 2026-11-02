@@ -8,6 +8,7 @@ import * as F from "./forms.js";
 import { icon } from "./logos.js";
 import { bindQuick, quickAdd } from "./quick.js";
 import { brandFor } from "./logos.js";
+import { initGestures } from "./gestures.js";
 const QuickBind = () => bindQuick(() => render(), (m, p) => F.openFull(m, p));
 
 const $ = (s) => document.querySelector(s);
@@ -92,7 +93,8 @@ function renderNow() {
   $("#title").textContent = view.title;
   $("#back").classList.toggle("hidden", !view.back);
   $("#headAction").innerHTML = view.action || "";
-  main.innerHTML = `<div class="view ${ui.desk ? "desk" : ""}">${view.html}</div>`;
+  const push = !keepScroll && view.back && !ui.desk;
+  main.innerHTML = `<div class="view ${ui.desk ? "desk" : ""} ${push ? "push" : ""}">${view.html}</div>`;
   main.scrollTop = keepScroll ? y : 0;
   lastHash = h;
   document.querySelectorAll("#tabbar [data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
@@ -368,6 +370,10 @@ document.addEventListener("input", (e) => {
 
 $("#back").addEventListener("click", () => (history.length > 1 ? history.back() : (location.hash = "#/inicio")));
 buildNav();
+initGestures({
+  onDelete: (id) => { const t = st.byId("tx", id); if (!t || !confirm(`¿Eliminar "${t.concept || "movimiento"}"?`)) return; st.remove("tx", id); render(); toast("Eliminado"); },
+  onDuplicate: (id) => { const t = st.byId("tx", id); if (!t) return; st.upsert("tx", { ...t, id: uid(), hist: false, date: today(), createdAt: Date.now() }); render(); toast("Duplicado con fecha de hoy"); },
+});
 // atajo de teclado (escritorio): N = registrar gasto
 document.addEventListener("keydown", (e) => {
   if (sheetOpen() || e.metaKey || e.ctrlKey || e.altKey || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName)) {

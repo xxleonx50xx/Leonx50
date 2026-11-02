@@ -87,11 +87,11 @@ function splitBadge(t) {
   return out.join("");
 }
 export function txRow(t, { accountId, running } = {}) {
-  return `<button class="row tx" data-act="tx" data-id="${t.id}">
+  return `<div class="swipe" data-id="${t.id}"><div class="sw-acts"><button data-sw="dup">${icon("repeat")}<span>Duplicar</span></button><button data-sw="del" class="del">${icon("trash-2")}<span>Eliminar</span></button></div><button class="row tx" data-act="tx" data-id="${t.id}">
     ${txTile(t)}
     <div class="mid"><div class="t1">${esc(txTitle(t))}</div><div class="t2">${esc(txSub(t))}</div>${splitBadge(t) ? `<div class="t3">${splitBadge(t)}</div>` : ""}</div>
     <div class="end">${txAmount(t, accountId)}${running != null ? `<small>${money(running)}</small>` : ""}</div>
-  </button>`;
+  </button></div>`;
 }
 function txTableRow(t, { accountId, running } = {}) {
   const c = catOf(t.categoryId);
@@ -924,15 +924,16 @@ const SUB_STATUS = {
 };
 export function subsView(ui) {
   const s = S();
-  const list = [...(s.subs || [])].sort((a, b) => (b.active - a.active) || subMonthly(b) - subMonthly(a));
-  const act = list.filter((x) => x.active);
+  const list = [...(s.subs || [])].sort((a, b) => (b.active - a.active) || (!!a.business - !!b.business) || subMonthly(b) - subMonthly(a));
+  const act = list.filter((x) => x.active && !x.business);
+  const biz = list.filter((x) => x.active && x.business);
   const total = act.reduce((q, x) => q + subMonthly(x), 0);
   const byCard = {};
   for (const x of act) byCard[x.accountId || "_"] = (byCard[x.accountId || "_"] || 0) + subMonthly(x);
   const action = `<button class="icon-btn" data-act="newSub" aria-label="Nueva">${icon("plus")}</button>`;
   if (!list.length) return { title: "Suscripciones", back: !ui.desk, action, html: empty("repeat", "Sin suscripciones", "Agrega Netflix, iCloud, Spotify… y asígnale a cada una la tarjeta donde se cobra.", `<button class="btn primary" data-act="newSub">${icon("plus")}<span>Agregar</span></button>`) };
   let html = `<div class="hero"><div class="hero-top"><span>Suscripciones activas</span></div><div class="big">${money(total)}<small class="muted" style="font-size:15px;font-weight:500"> /mes</small></div>
-    <small class="hero-note">${money0(total * 12)} al año · ${act.length} activas</small>
+    <small class="hero-note">${money0(total * 12)} al año · ${act.length} activas${biz.length ? ` · aparte ${money0(biz.reduce((q, x) => q + subMonthly(x), 0))}/mes que paga Ad Center` : ""}</small>
     <div class="hero-row">${Object.entries(byCard).map(([id, v]) => `<div><small>${id === "_" ? "Sin tarjeta" : esc(accName(id))}</small><b>${money0(v)}</b></div>`).join("")}</div></div>`;
   const rows = list.map((x) => ({ x, i: subInfo(s, x, brandFor) }));
   const tile = (x) => (brandFor(x.name) ? logo(brandFor(x.name), ui.desk ? "xs" : "") : iconTile("repeat", "", ui.desk ? "xs" : ""));
