@@ -1,11 +1,12 @@
 // ================= Service Worker · Cuadra =================
 // "Red primero" para el código (siempre la versión más nueva) y respaldo
 // desde caché para que la app abra sin internet.
-const VERSION = "v1";
+const VERSION = "v2";
 const CACHE = "cuadra-" + VERSION;
 const ASSETS = [
   "./", "./index.html", "./css/styles.css", "./manifest.webmanifest",
   "./js/app.js", "./js/store.js", "./js/calc.js", "./js/format.js", "./js/ui.js", "./js/views.js", "./js/forms.js",
+  "./js/quick.js", "./js/logos.js", "./js/icons.js", "./js/brands.js",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-180.png",
 ];
 

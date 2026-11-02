@@ -8,11 +8,20 @@ export const SCHEMA = 1;
 export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
 export const ACCOUNT_TYPES = {
-  debit: { label: "Débito", plural: "Débito", icon: "💳" },
-  cash: { label: "Efectivo", plural: "Efectivo", icon: "💵" },
-  fund: { label: "Fondo común", plural: "Fondo común", icon: "🏠" },
-  savings: { label: "Ahorro", plural: "Ahorro / inversión", icon: "🌱" },
-  credit: { label: "Crédito", plural: "Tarjetas de crédito", icon: "💳" },
+  debit: { label: "Débito", plural: "Débito", icon: "💳", ico: "landmark" },
+  cash: { label: "Efectivo", plural: "Efectivo", icon: "💵", ico: "banknote" },
+  fund: { label: "Fondo común", plural: "Fondo común", icon: "🏠", ico: "house" },
+  savings: { label: "Ahorro", plural: "Ahorro / inversión", icon: "🌱", ico: "piggy-bank" },
+  credit: { label: "Crédito", plural: "Tarjetas de crédito", icon: "💳", ico: "credit-card" },
+};
+
+// ícono de línea para las categorías predeterminadas
+export const CAT_ICO = {
+  c_super: "shopping-cart", c_rest: "utensils", c_gas: "fuel", c_trans: "car-taxi-front", c_serv: "lightbulb",
+  c_renta: "house", c_casa: "sofa", c_subs: "tv", c_auto: "car", c_salud: "stethoscope", c_seguro: "shield",
+  c_gym: "dumbbell", c_ropa: "shirt", c_elec: "smartphone", c_regalo: "gift", c_viaje: "plane", c_trabajo: "briefcase",
+  c_boda: "gem", c_otros: "package", c_agua: "droplet", c_internet: "wifi",
+  i_trabajo: "briefcase", i_bono: "star", i_venta: "tag", i_regalo: "gift", i_aporte: "house-plus", i_reemb: "undo-2", i_otro: "circle-plus",
 };
 
 export const DEFAULT_CATEGORIES = () => [
@@ -112,6 +121,8 @@ export function normalize(o) {
     if (!Array.isArray(out[k])) out[k] = d[k];
   }
   if (!out.categories.length) out.categories = DEFAULT_CATEGORIES();
+  out.categories.forEach((c) => { if (!c.ico && CAT_ICO[c.id]) c.ico = CAT_ICO[c.id]; });
+  out.settings.catUse ||= {};
   out.goals.forEach((g) => (g.contributions ||= []));
   out.tx.forEach((t) => (t.shares ||= []));
   out.msi.forEach((m) => (m.shares ||= []));

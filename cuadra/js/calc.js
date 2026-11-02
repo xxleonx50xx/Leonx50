@@ -299,3 +299,54 @@ export function goalProgress(S, g, C) {
 
 /** Saldo que el app espera de una cuenta en su "unidad natural" (deuda para crédito). */
 export const naturalBalance = (a, bal) => (a.type === "credit" ? -bal : bal);
+
+// ---------- Gastos de casa (dividir con tu pareja) ----------
+/** Desglose de un gasto de casa: quién pagó y cuánto le toca a cada quien. */
+export function houseLine(S, t) {
+  const fundId = S.settings.fund.accountId;
+  const pid = S.settings.partnerId;
+  const myPct = Number(S.settings.fund.myPct) || 0;
+  if (t.type === "expense" && t.accountId === fundId) {
+    const total = Number(t.amount);
+    return { paidBy: "fund", total, mine: r2((total * myPct) / 100), theirs: r2(total - (total * myPct) / 100), settle: 0 };
+  }
+  if (t.type === "expense") {
+    const total = Number(t.amount);
+    const theirs = r2((t.shares || []).filter((x) => x.personId === pid).reduce((s, x) => s + Number(x.amount || 0), 0));
+    return { paidBy: "me", total, mine: r2(total - theirs), theirs, settle: theirs };
+  }
+  if (t.type === "debt" && t.dir === "iOwe") {
+    const total = Number(t.total ?? t.amount);
+    return { paidBy: "partner", total, mine: Number(t.amount), theirs: r2(total - Number(t.amount)), settle: -Number(t.amount) };
+  }
+  return null;
+}
+export const isHouse = (S, t) => !!t.house || (t.type === "expense" && t.accountId && t.accountId === S.settings.fund.accountId);
+
+export function houseStats(S, key) {
+  const items = [];
+  const sum = { total: 0, mine: 0, theirs: 0, settle: 0, me: 0, partner: 0, fund: 0 };
+  const byCat = {};
+  for (const t of S.tx) {
+    if (monthKey(t.date) !== key || !isHouse(S, t)) continue;
+    const l = houseLine(S, t);
+    if (!l) continue;
+    items.push({ t, ...l });
+    sum.total += l.total; sum.mine += l.mine; sum.theirs += l.theirs; sum.settle += l.settle; sum[l.paidBy] += l.total;
+    byCat[t.categoryId || "_"] = (byCat[t.categoryId || "_"] || 0) + l.total;
+  }
+  for (const k in sum) sum[k] = r2(sum[k]);
+  items.sort((a, b) => (a.t.date < b.t.date ? 1 : a.t.date > b.t.date ? -1 : (b.t.createdAt || 0) - (a.t.createdAt || 0)));
+  const budget = (S.settings.fund.budget || []).map((b) => ({ ...b, amount: Number(b.amount) || 0 }));
+  const seen = new Set();
+  const lines = budget.map((b) => { const first = !seen.has(b.categoryId); seen.add(b.categoryId); return { ...b, spent: first ? r2(byCat[b.categoryId] || 0) : 0 }; });
+  const extra = Object.entries(byCat).filter(([c]) => !seen.has(c)).map(([categoryId, v]) => ({ categoryId, amount: 0, spent: r2(v), extra: true }));
+  return { items, sum, lines: [...lines, ...extra], budgetTotal: r2(budget.reduce((s, b) => s + b.amount, 0)) };
+}
+
+/** Categorías ordenadas por uso (las que más usas primero). */
+export function categoriesByUse(S, kind) {
+  const n = {};
+  for (const t of S.tx) if (t.categoryId) n[t.categoryId] = (n[t.categoryId] || 0) + 1;
+  return S.categories.filter((c) => c.kind === kind).map((c, i) => ({ c, n: n[c.id] || 0, i })).sort((a, b) => b.n - a.n || a.i - b.i).map((x) => x.c);
+}

@@ -5,29 +5,51 @@ import { today, monthKey, shiftMonth, parseAmount } from "./format.js";
 import { toast, closeSheet, sheetOpen } from "./ui.js";
 import * as V from "./views.js";
 import * as F from "./forms.js";
+import { icon } from "./logos.js";
+import { bindQuick } from "./quick.js";
+const QuickBind = () => bindQuick(() => render(), (m, p) => F.openFull(m, p));
 
 const $ = (s) => document.querySelector(s);
-const ui = { month: monthKey(today()), movFilter: { q: "", type: "", account: "", all: false }, corteEnd: null };
+const deskMQ = window.matchMedia("(min-width: 1000px)");
+const ui = { month: monthKey(today()), movFilter: { q: "", type: "", account: "", cat: "", all: false }, corteEnd: null, sort: { key: "date", dir: -1 }, desk: deskMQ.matches };
 
-// ---------- Rutas ----------
+// ---------- Rutas: [regex, vista, pestaña móvil, sección de la barra lateral] ----------
 const routes = [
-  [/^#\/inicio$/, () => V.home(ui), "inicio"],
-  [/^#\/cuentas$/, () => V.accounts(), "cuentas"],
-  [/^#\/cuadrar$/, () => V.reconcileList(), "cuentas"],
-  [/^#\/cuenta\/(.+)$/, (m) => V.accountDetail(m[1]), "cuentas"],
-  [/^#\/personas$/, () => V.people(), "personas"],
-  [/^#\/persona\/(.+)$/, (m) => V.personDetail(m[1]), "personas"],
-  [/^#\/cortes$/, () => V.cortes(ui), "personas"],
-  [/^#\/mas$/, () => V.more(), "mas"],
-  [/^#\/movs$/, () => V.movements(ui), "mas"],
-  [/^#\/fondo$/, () => V.fund(ui), "mas"],
-  [/^#\/metas$/, () => V.goals(), "mas"],
-  [/^#\/meta\/(.+)$/, (m) => V.goalDetail(m[1]), "mas"],
-  [/^#\/msi$/, () => V.msiList(), "mas"],
-  [/^#\/categorias$/, () => V.categories(), "mas"],
-  [/^#\/respaldo$/, () => V.backup(), "mas"],
-  [/^#\/ajustes$/, () => V.settings(), "mas"],
+  [/^#\/inicio$/, () => V.home(ui), "inicio", "inicio"],
+  [/^#\/cuentas$/, () => V.accounts(ui), "cuentas", "cuentas"],
+  [/^#\/cuadrar$/, () => V.reconcileList(), "cuentas", "cuentas"],
+  [/^#\/cuenta\/(.+)$/, (m) => V.accountDetail(m[1], ui), "cuentas", "cuentas"],
+  [/^#\/casa$/, () => V.casa(ui), "casa", "casa"],
+  [/^#\/fondo$/, () => V.fund(ui), "casa", "casa"],
+  [/^#\/personas$/, () => V.people(ui), "mas", "personas"],
+  [/^#\/persona\/(.+)$/, (m) => V.personDetail(m[1], ui), "mas", "personas"],
+  [/^#\/cortes$/, () => V.cortes(ui), "mas", "cortes"],
+  [/^#\/mas$/, () => V.more(), "mas", ""],
+  [/^#\/movs$/, () => V.movements(ui), "mas", "movs"],
+  [/^#\/metas$/, () => V.goals(), "mas", "metas"],
+  [/^#\/meta\/(.+)$/, (m) => V.goalDetail(m[1]), "mas", "metas"],
+  [/^#\/msi$/, () => V.msiList(ui), "mas", "msi"],
+  [/^#\/categorias$/, () => V.categories(), "mas", "categorias"],
+  [/^#\/respaldo$/, () => V.backup(), "mas", "respaldo"],
+  [/^#\/ajustes$/, () => V.settings(), "mas", "ajustes"],
 ];
+
+// ---------- Navegación (barra inferior móvil y barra lateral de escritorio) ----------
+const TABS = [["inicio", "#/inicio", "layout-dashboard", "Inicio"], ["cuentas", "#/cuentas", "wallet", "Cuentas"], null, ["casa", "#/casa", "house", "Casa"], ["mas", "#/mas", "ellipsis", "Más"]];
+const SIDE = [
+  ["inicio", "#/inicio", "layout-dashboard", "Inicio"], ["movs", "#/movs", "list", "Movimientos"], ["cuentas", "#/cuentas", "wallet", "Cuentas"],
+  ["casa", "#/casa", "house", "Casa"], ["personas", "#/personas", "users", "Personas"], ["cortes", "#/cortes", "scissors", "Cortes"],
+  ["msi", "#/msi", "calendar", "MSI"], ["metas", "#/metas", "target", "Metas"], null,
+  ["categorias", "#/categorias", "tag", "Categorías"], ["respaldo", "#/respaldo", "download", "Respaldo"], ["ajustes", "#/ajustes", "settings", "Ajustes"],
+];
+function buildNav() {
+  $("#tabbar").innerHTML = TABS.map((t) => t ? `<a href="${t[1]}" data-tab="${t[0]}">${icon(t[2])}<span>${t[3]}</span></a>` : `<button id="fab" class="fab" aria-label="Registrar">${icon("plus")}</button>`).join("");
+  $("#sidebar").innerHTML = `<div class="side-logo"><span class="lg-mark sm"></span><b>Cuadra</b></div>
+    <button class="btn primary full side-add" data-act="add" data-kind="expense">${icon("plus")}<span>Registrar gasto</span><kbd>N</kbd></button>
+    <nav>${SIDE.map((t) => t ? `<a href="${t[1]}" data-nav="${t[0]}">${icon(t[2])}<span>${t[3]}</span></a>` : `<hr/>`).join("")}</nav>`;
+  $("#back").innerHTML = icon("chevron-left");
+  $("#fab").addEventListener("click", () => F.openAdd("expense"));
+}
 
 let lastHash = "";
 let rendering = false;
@@ -41,10 +63,10 @@ function renderNow() {
   $("#app").classList.remove("hidden");
   $("#welcome").classList.add("hidden");
   const h = location.hash || "#/inicio";
-  let view = null, tab = "inicio";
-  for (const [re, fn, t] of routes) {
+  let view = null, tab = "inicio", nav = "inicio";
+  for (const [re, fn, t, n] of routes) {
     const m = h.match(re);
-    if (m) { view = fn(m); tab = t; break; }
+    if (m) { view = fn(m); tab = t; nav = n; break; }
   }
   if (!view) { location.hash = "#/inicio"; return; }
   const main = $("#main");
@@ -53,11 +75,14 @@ function renderNow() {
   $("#title").textContent = view.title;
   $("#back").classList.toggle("hidden", !view.back);
   $("#headAction").innerHTML = view.action || "";
-  main.innerHTML = `<div class="view">${view.html}</div>`;
+  main.innerHTML = `<div class="view ${ui.desk ? "desk" : ""}">${view.html}</div>`;
   main.scrollTop = keepScroll ? y : 0;
   lastHash = h;
-  document.querySelectorAll(".tabbar [data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
+  document.querySelectorAll("#tabbar [data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
+  document.querySelectorAll("#sidebar [data-nav]").forEach((b) => b.classList.toggle("on", b.dataset.nav === nav));
 }
+deskMQ.addEventListener("change", (e) => { ui.desk = e.matches; render(); });
+QuickBind();
 F.bindRefresh(render);
 
 // ---------- Bienvenida ----------
@@ -144,7 +169,10 @@ const actions = {
   add: (d) => F.openAdd(d.kind, {
     ...(d.acc ? { accountId: d.acc } : {}), ...(d.to ? { toAccountId: d.to } : {}),
     ...(d.person ? { personId: d.person } : {}), ...(d.pkind ? { kind: d.pkind } : {}), ...(d.split ? { split: d.split } : {}),
+    ...(d.payer ? { payer: d.payer } : {}),
   }),
+  sort: (d) => { ui.sort = { key: d.key, dir: ui.sort.key === d.key ? -ui.sort.dir : -1 }; render(); },
+  inlineAdd: () => inlineAdd(),
   newAccount: () => F.accountForm(),
   editAccount: (d) => F.accountForm(st.account(d.id)),
   reconcile: (d) => F.reconcileForm(d.id),
@@ -191,6 +219,8 @@ const actions = {
 };
 
 document.addEventListener("click", (e) => {
+  const go = e.target.closest("[data-go]");
+  if (go && !e.target.closest("[data-act]")) { location.hash = go.dataset.go; return; }
   const el = e.target.closest("[data-act]");
   if (!el || el.tagName === "INPUT" || el.tagName === "SELECT") return;
   const fn = actions[el.dataset.act];
@@ -226,7 +256,39 @@ document.addEventListener("input", (e) => {
 });
 
 $("#back").addEventListener("click", () => (history.length > 1 ? history.back() : (location.hash = "#/inicio")));
-$("#fab").addEventListener("click", () => F.addMenu());
+buildNav();
+// atajo de teclado (escritorio): N = registrar gasto
+document.addEventListener("keydown", (e) => {
+  if (sheetOpen() || e.metaKey || e.ctrlKey || e.altKey || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName)) {
+    if (e.key === "Enter" && document.activeElement?.closest("#inlineAdd")) { e.preventDefault(); inlineAdd(); }
+    return;
+  }
+  if (e.key === "n" || e.key === "N") { e.preventDefault(); F.openAdd("expense"); }
+});
+
+// ---------- Fila para capturar gastos directo en la tabla (escritorio) ----------
+function inlineAdd() {
+  const row = document.getElementById("inlineAdd");
+  if (!row) return;
+  const g = (n) => row.querySelector(`[name="${n}"]`);
+  const amount = parseAmount(g("ia_amount").value);
+  if (!(amount > 0)) { g("ia_amount").focus(); return toast("Escribe el monto"); }
+  const s = st.state();
+  const pid = s.settings.partnerId;
+  const split = g("ia_split").value;
+  const pct = split === "partner" ? Number(s.settings.partnerPct) : split === "half" ? 50 : split === "partner100" ? 100 : split === "house" ? 100 - Number(s.settings.fund.myPct) : 0;
+  const accountId = g("ia_acc").value;
+  st.upsert("tx", {
+    id: uid(), type: "expense", amount, accountId, categoryId: g("ia_cat").value, concept: g("ia_concept").value.trim(), date: g("ia_date").value || today(),
+    house: split === "house" || accountId === s.settings.fund.accountId,
+    shares: pct && pid ? [{ personId: pid, pct, amount: Math.round(amount * pct) / 100 }] : [], createdAt: Date.now(),
+  });
+  s.settings.lastAccountId = accountId;
+  st.save();
+  render();
+  toast("Gasto agregado");
+  setTimeout(() => document.querySelector('#inlineAdd [name="ia_concept"]')?.focus(), 30);
+}
 $("#wStart").addEventListener("click", startFresh);
 $("#wImport").addEventListener("change", (e) => importBackup(e.target.files[0]));
 window.addEventListener("hashchange", () => { if (sheetOpen()) closeSheet(true); if (!location.hash.startsWith("#/cortes")) ui.corteEnd = null; render(); });

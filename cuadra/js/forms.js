@@ -4,6 +4,8 @@ import { ACCOUNT_TYPES, uid } from "./store.js";
 import { esc, money, parseAmount, round2, today, addMonths, fmtDate, fmtRange } from "./format.js";
 import { openSheet, closeSheet, fieldError, field, amountInput, textInput, numInput, dateInput, select, chips, segmented, toggle, toast, kv } from "./ui.js";
 import { compute, msiInfo, cardInfo, nextDayOfMonth, naturalBalance, planInfo, corteSummary, EVENT_LABEL } from "./calc.js";
+import { icon } from "./logos.js";
+import { quickAdd, accountTile } from "./quick.js";
 
 let refresh = () => {};
 export const bindRefresh = (fn) => (refresh = fn);
@@ -42,7 +44,7 @@ function accountOptions(filter = () => true) {
     .filter((a) => !a.archived && filter(a))
     .map((a) => {
       const nb = naturalBalance(a, C.acc[a.id]);
-      return { value: a.id, label: a.name, icon: ACCOUNT_TYPES[a.type]?.icon, sub: a.type === "credit" ? `debe ${money(nb)}` : money(nb), attrs: `data-type="${a.type}"` };
+      return { value: a.id, label: a.name, icon: accountTile(a, "xs"), sub: a.type === "credit" ? `debe ${money(nb)}` : money(nb), attrs: `data-type="${a.type}"` };
     });
 }
 function defaultAccountId(filter = () => true) {
@@ -51,7 +53,7 @@ function defaultAccountId(filter = () => true) {
   if (last && !last.archived && filter(last)) return last.id;
   return (s.accounts.find((a) => !a.archived && a.type === "debit" && filter(a)) || s.accounts.find((a) => !a.archived && filter(a)))?.id;
 }
-const categoryOptions = (kind) => S().categories.filter((c) => c.kind === kind).map((c) => ({ value: c.id, label: c.name, icon: c.icon }));
+const categoryOptions = (kind) => S().categories.filter((c) => c.kind === kind).map((c) => ({ value: c.id, label: c.name, icon: c.ico ? icon(c.ico) : c.icon }));
 const peopleOptions = (withNone) => [
   ...(withNone ? [{ value: "", label: withNone }] : []),
   ...S().people.filter((p) => !p.archived).map((p) => ({ value: p.id, label: p.name })),
@@ -112,8 +114,9 @@ function deriveSplit(shares, amount) {
 export function expenseForm(t = null, preset = {}) {
   if (noAccountsGuard()) return;
   const s = S();
-  const v = t || { date: today(), accountId: preset.accountId || defaultAccountId(), categoryId: preset.categoryId || "", shares: [] };
-  const split = preset.split ? { mode: preset.split } : deriveSplit(v.shares, v.amount);
+  const v = t || { date: preset.date || today(), accountId: preset.accountId || defaultAccountId(), categoryId: preset.categoryId || "", shares: [], amount: preset.amount, concept: preset.concept, house: !!preset.house };
+  const houseSplit = { mode: "partner", pct: 100 - (Number(s.settings.fund.myPct) || 0) };
+  const split = preset.split ? { mode: preset.split } : !t && preset.house ? houseSplit : deriveSplit(v.shares, v.amount);
   const months = [3, 6, 9, 12, 18, 24].map((n) => ({ value: n, label: `${n}` }));
   openSheet({
     title: t ? "Editar gasto" : "Nuevo gasto",
@@ -122,6 +125,7 @@ export function expenseForm(t = null, preset = {}) {
       ${field("Concepto", textInput("concept", v.concept, "Walmart, gasolina, cena…"))}
       <div class="field"><span class="lbl">Pagado con</span>${chips("accountId", accountOptions(), v.accountId, { cls: "scroll" })}</div>
       <div class="field"><span class="lbl">Categoría</span>${chips("categoryId", categoryOptions("expense"), v.categoryId, { cls: "wrap small" })}</div>
+      ${st.partner() ? toggle("house", "Gasto de casa", !!v.house, "Se reparte según el % de la casa") : ""}
       ${splitSection(split)}
       ${field("Fecha", dateInput("date", v.date))}
       ${!t ? `<div data-show-if="acctype=credit" class="msi-box">
@@ -140,6 +144,12 @@ export function expenseForm(t = null, preset = {}) {
         if (!t && sel?.dataset.type === "fund" && form.elements.split) form.elements.split.value = "none";
       };
       form.addEventListener("change", (e) => e.target.name === "accountId" && (setType(), form._apply()));
+      form.elements.house?.addEventListener("change", () => {
+        if (!form.elements.house.checked) return;
+        form.elements.split.value = "partner";
+        form.elements.splitPct.value = houseSplit.pct;
+        form._apply();
+      });
       setType();
       wireConditional(form);
     },
@@ -151,7 +161,7 @@ export function expenseForm(t = null, preset = {}) {
       const shares = readSplit(fd);
       if (shares === null) return toast("Elige la persona"), false;
       s.settings.lastAccountId = accountId;
-      const base = { concept: fd.get("concept").trim(), categoryId: fd.get("categoryId") || "", date: fd.get("date") || today(), note: fd.get("note").trim() };
+      const base = { concept: fd.get("concept").trim(), categoryId: fd.get("categoryId") || "", date: fd.get("date") || today(), note: fd.get("note").trim(), house: !!fd.get("house") || accountId === s.settings.fund.accountId };
       if (fd.get("isMsi") && st.account(accountId)?.type === "credit") {
         const acc = st.account(accountId);
         const m = {
@@ -177,7 +187,7 @@ export function incomeForm(t = null, preset = {}) {
   if (noAccountsGuard()) return;
   const s = S();
   const fundId = s.settings.fund.accountId;
-  const v = t || { date: today(), accountId: preset.accountId || defaultAccountId((a) => a.type !== "credit"), categoryId: preset.categoryId || "i_trabajo", personId: preset.personId || "" };
+  const v = t || { date: preset.date || today(), accountId: preset.accountId || defaultAccountId((a) => a.type !== "credit"), categoryId: preset.categoryId || "i_trabajo", personId: preset.personId || "", amount: preset.amount, concept: preset.concept };
   openSheet({
     title: t ? "Editar ingreso" : preset.title || "Nuevo ingreso",
     body: `
@@ -309,24 +319,25 @@ export function personTxForm(t = null, preset = {}) {
 }
 
 // ================= "MI PAREJA PAGÓ ALGO" (te toca una parte) =================
-export function partnerPaidForm(t = null) {
+export function partnerPaidForm(t = null, preset = {}) {
   const s = S();
   const p = st.partner();
   if (!p) { toast("Configura a tu pareja en Más → Ajustes"); return; }
-  const myPctDef = 100 - (Number(s.settings.partnerPct) || 0);
-  const total = t?.total ?? "";
+  const myPctDef = preset.house || t?.house ? Number(s.settings.fund.myPct) || 0 : 100 - (Number(s.settings.partnerPct) || 0);
+  const total = t?.total ?? preset.amount ?? "";
   const myPct = t?.myPct ?? myPctDef;
   openSheet({
     title: t ? "Editar" : `${p.name} pagó algo`,
     body: `
       <p class="hint">Registra lo que pagó ${esc(p.name)} con su dinero; a ti te toca una parte.</p>
       ${field("Total que pagó", amountInput("total", total))}
-      ${field("Concepto", textInput("concept", t?.concept, "Súper, cena, Uber…"))}
+      ${field("Concepto", textInput("concept", t?.concept ?? preset.concept, "Súper, cena, Uber…"))}
       <div class="row2">
         ${field("Tu parte (%)", numInput("myPct", myPct))}
-        ${field("Fecha", dateInput("date", t?.date || today()))}
+        ${field("Fecha", dateInput("date", t?.date || preset.date || today()))}
       </div>
-      <div class="field"><span class="lbl">Categoría</span>${chips("categoryId", categoryOptions("expense"), t?.categoryId || "", { cls: "wrap small" })}</div>
+      ${toggle("house", "Gasto de casa", !!(t?.house ?? preset.house))}
+      <div class="field"><span class="lbl">Categoría</span>${chips("categoryId", categoryOptions("expense"), t?.categoryId || preset.categoryId || "", { cls: "wrap small" })}</div>
       <div class="calc-line" id="ppCalc"></div>`,
     extraButtons: t ? [{ label: "Eliminar", cls: "danger", onClick: () => delTx(t) }] : [],
     onMount: (form) => {
@@ -344,7 +355,7 @@ export function partnerPaidForm(t = null) {
       const pct = parsePct(fd.get("myPct"), myPctDef);
       st.upsert("tx", {
         ...(t || {}), id: t?.id || uid(), type: "debt", dir: "iOwe", personId: p.id,
-        amount: round2((tot * pct) / 100), total: tot, myPct: pct, categoryId: fd.get("categoryId") || "",
+        amount: round2((tot * pct) / 100), total: tot, myPct: pct, categoryId: fd.get("categoryId") || "", house: !!fd.get("house"),
         concept: fd.get("concept").trim(), date: fd.get("date") || today(), accountId: "", shares: [], createdAt: t?.createdAt || Date.now(),
       });
       done("Registrado");
@@ -783,20 +794,21 @@ export function categoryForm(c = null, kind = "expense") {
 export function addMenu() {
   const p = st.partner();
   const items = [
-    ["expense", "💸", "Gasto"],
-    ["income", "💰", "Ingreso"],
-    ["payment", "💳", "Pago a tarjeta"],
-    ["transfer", "🔁", "Transferir"],
-    ["person", "🤝", "Préstamo / deuda"],
-    ...(p ? [["partnerPaid", "🧾", `${p.name} pagó`]] : []),
-    ["msi", "🗓️", "Compra a MSI"],
-    ["bonus", "⭐", "Bono"],
-    ["fundIn", "🏠", "Aportar al fondo"],
-    ["adjust", "⚖️", "Ajuste"],
+    ["expense", "receipt", "Gasto"],
+    ["income", "arrow-down-left", "Ingreso"],
+    ...(p ? [["house", "house", "Gasto de casa"]] : []),
+    ["payment", "credit-card", "Pago a tarjeta"],
+    ["transfer", "arrow-left-right", "Transferir"],
+    ["person", "handshake", "Préstamo / deuda"],
+    ...(p ? [["partnerPaid", "users", `${p.name} pagó`]] : []),
+    ["msi", "calendar", "Compra a MSI"],
+    ["bonus", "star", "Bono"],
+    ["fundIn", "house-plus", "Aportar al fondo"],
+    ["adjust", "scale", "Ajuste"],
   ];
   openSheet({
     title: "¿Qué registras?",
-    body: `<div class="add-grid">${items.map(([k, i, l]) => `<button type="button" class="add-item" data-add="${k}"><i>${i}</i><span>${esc(l)}</span></button>`).join("")}</div>`,
+    body: `<div class="add-grid">${items.map(([k, i, l]) => `<button type="button" class="add-item" data-add="${k}"><span class="tile accent">${icon(i)}</span><span>${esc(l)}</span></button>`).join("")}</div>`,
     onMount: (form) => form.addEventListener("click", (e) => {
       const b = e.target.closest("[data-add]");
       if (!b) return;
@@ -805,16 +817,31 @@ export function addMenu() {
     }),
   });
 }
+/** Abre el formulario completo (desde "Más opciones" del registro rápido). */
+export function openFull(mode, preset = {}) {
+  const s = S();
+  if (mode === "menu") return addMenu();
+  if (mode === "income") return incomeForm(null, preset);
+  if (mode === "house") {
+    if (preset.payer === "partner") return partnerPaidForm(null, { ...preset, house: true });
+    if (preset.payer === "fund") return expenseForm(null, { ...preset, accountId: s.settings.fund.accountId, split: "none", house: true });
+    return expenseForm(null, { ...preset, house: true });
+  }
+  return expenseForm(null, preset);
+}
 export function openAdd(kind, preset = {}) {
   const s = S();
   const fundId = s.settings.fund.accountId;
   switch (kind) {
-    case "expense": return expenseForm(null, preset);
-    case "income": return incomeForm(null, preset);
+    case "expense": return quickAdd("expense", preset);
+    case "house": return quickAdd("house", preset);
+    case "income": return quickAdd("income", preset);
+    case "expenseFull": return expenseForm(null, preset);
+    case "incomeFull": return incomeForm(null, preset);
     case "payment": return transferForm(null, { payment: true, ...preset });
     case "transfer": return transferForm(null, preset);
     case "person": return personTxForm(null, preset);
-    case "partnerPaid": return partnerPaidForm();
+    case "partnerPaid": return partnerPaidForm(null, preset);
     case "msi": return msiForm(null, preset);
     case "bonus": return incomeForm(null, { categoryId: "i_bono", title: "Bono / bonificación", accountId: s.accounts.find((a) => a.type === "credit" && !a.archived)?.id, ...preset });
     case "adjust": return adjustForm(null, preset);
@@ -824,7 +851,7 @@ export function openAdd(kind, preset = {}) {
     case "fundPartner":
       return incomeForm(null, { accountId: fundId, categoryId: "i_aporte", personId: s.settings.partnerId || "", title: `Aportación de ${partnerName()}` });
     case "fundExpense":
-      return expenseForm(null, { accountId: fundId, split: "none", ...preset });
+      return quickAdd("house", { payer: "fund", ...preset });
   }
 }
 
