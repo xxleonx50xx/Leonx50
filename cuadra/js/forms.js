@@ -876,3 +876,39 @@ function delTx(t) {
 }
 
 export { EVENT_LABEL, planInfo, kv };
+
+// ================= SUSCRIPCIÓN =================
+export function subForm(x = null) {
+  const s = S();
+  const v = x || { freq: "mensual", active: true, categoryId: "c_subs" };
+  openSheet({
+    title: x ? "Suscripción" : "Nueva suscripción",
+    body: `
+      ${field("Nombre", textInput("name", v.name, "Netflix, iCloud, Spotify…", x ? "" : "data-autofocus"))}
+      <div class="row2">
+        ${field("Monto", numInput("amount", v.amount ?? ""))}
+        ${field("Cada", select("freq", [{ value: "mensual", label: "Mes" }, { value: "anual", label: "Año" }], v.freq))}
+      </div>
+      <div class="field"><span class="lbl">Tarjeta donde se cobra</span>${chips("accountId", [{ value: "", label: "Sin asignar" }, ...accountOptions()], v.accountId || "", { cls: "scroll" })}</div>
+      <div class="row2">
+        ${field("Día de cobro", numInput("day", v.day || "", "15"))}
+        ${field("Categoría", select("categoryId", S().categories.filter((c) => c.kind === "expense").map((c) => ({ value: c.id, label: c.name })), v.categoryId))}
+      </div>
+      ${field("Buscar cobros que digan", textInput("match", v.match || "", "Opcional, ej. “open ai”"), "Para validar contra tus movimientos si el nombre del cargo es distinto.")}
+      ${field("Nota", textInput("note", v.note || "", "Plan familiar, compartida con Liz…"))}
+      ${toggle("active", "Activa", v.active !== false)}`,
+    extraButtons: [
+      ...(x ? [{ label: "Eliminar", cls: "danger", onClick: () => { if (!confirm("¿Eliminar suscripción?")) return false; st.remove("subs", x.id); done("Eliminada"); } }] : []),
+      ...(x && x.active ? [{ label: "Registrar cobro", onClick: () => { closeSheet(true); quickAdd("expense", { amount: x.amount, concept: x.name, accountId: x.accountId || undefined, categoryId: x.categoryId }); return false; } }] : []),
+    ],
+    onSubmit: (form, fd) => {
+      const name = fd.get("name").trim();
+      if (!name) return fieldError(form, "name", "Ponle nombre");
+      const amount = parseAmount(fd.get("amount"));
+      if (!(amount > 0)) return fieldError(form, "amount", "Escribe el monto");
+      st.upsert("subs", { ...(x || {}), id: x?.id || uid(), name, amount, freq: fd.get("freq"), accountId: fd.get("accountId") || "", day: parseInt(fd.get("day"), 10) || null,
+        categoryId: fd.get("categoryId"), match: fd.get("match").trim(), note: fd.get("note").trim(), active: !!fd.get("active") });
+      done("Suscripción guardada");
+    },
+  });
+}

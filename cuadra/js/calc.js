@@ -7,6 +7,7 @@ const r2 = round2;
 
 // ---------- Movimientos → efecto en cuentas ----------
 export function txAccountEffects(t) {
+  if (t.hist) return []; // histórico importado: solo para análisis, no mueve saldos
   const a = Number(t.amount) || 0;
   switch (t.type) {
     case "expense": return [[t.accountId, -a]];
@@ -21,6 +22,7 @@ export function txAccountEffects(t) {
 
 // ---------- Movimientos → efecto con personas (positivo = te deben) ----------
 export function txPersonEffects(t) {
+  if (t.hist) return [];
   const a = Number(t.amount) || 0;
   const out = [];
   if (t.type === "expense") {
@@ -199,7 +201,9 @@ export function monthStats(S, key) {
   let msiMine = 0;
   for (const m of S.msi) {
     const info = msiInfo(m);
-    for (const ins of msiInstallments(m, `${key}-01`, `${key}-31`)) {
+    // antes de trackFrom las mensualidades ya vienen en el histórico importado
+    const from = m.trackFrom && m.trackFrom > `${key}-01` ? m.trackFrom : `${key}-01`;
+    for (const ins of msiInstallments(m, from, `${key}-31`)) {
       const v = (ins.amount * info.myPct) / 100;
       if (v > 0) { add(m.categoryId, v); msiMine += v; }
     }
@@ -350,3 +354,95 @@ export function categoriesByUse(S, kind) {
   for (const t of S.tx) if (t.categoryId) n[t.categoryId] = (n[t.categoryId] || 0) + 1;
   return S.categories.filter((c) => c.kind === kind).map((c, i) => ({ c, n: n[c.id] || 0, i })).sort((a, b) => b.n - a.n || a.i - b.i).map((x) => x.c);
 }
+
+// ---------- Análisis de varios meses ----------
+const cleanConcept = (c) => String(c || "").replace(/\d+\s*\/\s*\d+/g, "").replace(/\b\d+\b/g, "").replace(/\b(msi|mes|último|ultimo)\b/gi, "").trim().split(/\s+/).slice(0, 2).join(" ");
+const title = (x) => x.replace(/\b\w/g, (c) => c.toUpperCase());
+export function merchantKey(t, brandFor) {
+  if (t.merchant) return t.merchant;
+  const b = brandFor(t.concept);
+  if (b) return b.name;
+  const c = cleanConcept(t.concept);
+  return c ? title(c.toLowerCase()) : null;
+}
+
+/** Promedios de los últimos `n` meses completos (más el mes en curso como referencia). */
+export function analysis(S, n, brandFor) {
+  const cur = monthKey(today());
+  const months = [];
+  for (let i = n; i >= 1; i--) months.push(monthKey(addMonths(`${cur}-01`, -i)));
+  const set = new Set(months);
+  const fundId = S.settings.fund.accountId;
+  const byMonth = Object.fromEntries([...months, cur].map((m) => [m, { spend: 0, mine: 0, work: 0, income: 0 }]));
+  const mer = {}, cat = {}, card = {};
+  let spend = 0, mine = 0, others = 0, work = 0, income = 0, subsSeen = 0, count = 0;
+  const addSpend = (t, m, amount, myPart, accountId, catId, key) => {
+    byMonth[m].spend += amount; byMonth[m].mine += myPart;
+    if (!set.has(m)) return;
+    spend += amount; mine += myPart; others += amount - myPart; count++;
+    const k = key || S.categories.find((c) => c.id === catId)?.name || "Otros";
+    const x = (mer[k] ||= { name: k, total: 0, n: 0, months: new Set(), acc: {}, sample: t, mine: 0 });
+    x.total += amount; x.n++; x.months.add(m); x.mine += myPart; if (accountId) x.acc[accountId] = (x.acc[accountId] || 0) + 1;
+    const c = (cat[catId || "_"] ||= { id: catId || "_", total: 0, mine: 0 });
+    c.total += amount; c.mine += myPart;
+    if (accountId) { const y = (card[accountId] ||= { id: accountId, total: 0 }); y.total += amount; }
+    if (catId === "c_subs") subsSeen += amount;
+  };
+  for (const t of S.tx) {
+    const m = monthKey(t.date);
+    if (!byMonth[m]) continue;
+    if (t.type === "expense" && !(t.accountId === fundId && !t.hist)) {
+      const sh = (t.shares || []).reduce((q, x) => q + Number(x.amount || 0), 0);
+      addSpend(t, m, Number(t.amount), Number(t.amount) - sh, t.accountId, t.categoryId, merchantKey(t, brandFor));
+    } else if (t.type === "income") {
+      const c = S.categories.find((x) => x.id === t.categoryId);
+      if (c && c.real === false) continue;
+      byMonth[m].income += Number(t.amount);
+      if (t.categoryId === "i_trabajo") byMonth[m].work += Number(t.amount);
+      if (set.has(m)) { income += Number(t.amount); if (t.categoryId === "i_trabajo") work += Number(t.amount); }
+    }
+  }
+  for (const pl of S.msi) {
+    const info = msiInfo(pl);
+    for (const ins of msiInstallments(pl, pl.trackFrom || "0000-00-00", `${cur}-31`)) {
+      const m = monthKey(ins.date);
+      if (!byMonth[m]) continue;
+      addSpend({ concept: pl.concept, categoryId: pl.categoryId }, m, ins.amount, (ins.amount * info.myPct) / 100, pl.accountId, pl.categoryId, merchantKey({ concept: pl.concept }, brandFor));
+    }
+  }
+  const N = Math.max(1, n);
+  const merchants = Object.values(mer).map((x) => ({ ...x, months: x.months.size, avg: r2(x.total / N), total: r2(x.total), ticket: r2(x.total / x.n), mine: r2(x.mine),
+    card: Object.entries(x.acc).sort((a, b) => b[1] - a[1])[0]?.[0] || null })).sort((a, b) => b.total - a.total);
+  const workMonths = months.map((m) => byMonth[m].work).sort((a, b) => a - b);
+  const median = workMonths.length ? (workMonths[Math.floor((workMonths.length - 1) / 2)] + workMonths[Math.ceil((workMonths.length - 1) / 2)]) / 2 : 0;
+  return {
+    months, cur, byMonth, count,
+    spend: r2(spend), avg: r2(spend / N), mine: r2(mine), avgMine: r2(mine / N), avgOthers: r2(others / N),
+    work: r2(work), avgWork: r2(work / N), medianWork: r2(median), avgIncome: r2(income / N),
+    saving: r2(work / N - mine / N),
+    merchants,
+    cats: Object.values(cat).map((c) => ({ ...c, avg: r2(c.total / N), total: r2(c.total) })).sort((a, b) => b.total - a.total),
+    cards: Object.values(card).map((c) => ({ ...c, avg: r2(c.total / N), total: r2(c.total) })).sort((a, b) => b.total - a.total),
+  };
+}
+
+// ---------- Suscripciones ----------
+export const subMonthly = (x) => (x.freq === "anual" ? Number(x.amount) / 12 : Number(x.amount)) || 0;
+export function subInfo(S, x, brandFor) {
+  const next = x.day ? nextDayOfMonth(Number(x.day)) : null;
+  // ¿se ha cobrado de verdad? busca el cargo más reciente que coincida
+  const key = (x.match || x.name || "").toLowerCase().split(/[,(/]/)[0].trim();
+  const b = brandFor(x.name);
+  const hits = S.tx.filter((t) => t.type === "expense" && ((b && brandFor(t.concept)?.id === b.id) || (key && String(t.concept || "").toLowerCase().includes(key)) || (t.subId === x.id)))
+    .sort((a, c) => (a.date < c.date ? 1 : -1));
+  const last = hits[0] || null;
+  const days = last ? daysBetweenLocal(last.date, today()) : null;
+  const limit = x.freq === "anual" ? 380 : 40;
+  let status = "ok";
+  if (!x.active) status = "off";
+  else if (!last || days > limit) status = "missing";
+  else if (last.accountId && x.accountId && last.accountId !== x.accountId) status = "card";
+  else if (Math.abs(Number(last.amount) - Number(x.amount)) > Math.max(5, Number(x.amount) * 0.1)) status = "amount";
+  return { next, last, days, status, monthly: r2(subMonthly(x)) };
+}
+function daysBetweenLocal(a, b) { return Math.round((parseYmd(b) - parseYmd(a)) / 86400000); }

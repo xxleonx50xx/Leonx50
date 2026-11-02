@@ -74,6 +74,7 @@ export const defaultState = () => ({
   msi: [],
   goals: [],
   cortes: [],
+  subs: [],
 });
 
 let S = null;
@@ -117,7 +118,7 @@ export function normalize(o) {
   const out = { ...d, ...o };
   out.settings = { ...d.settings, ...(o.settings || {}) };
   out.settings.fund = { ...d.settings.fund, ...((o.settings || {}).fund || {}) };
-  for (const k of ["accounts", "categories", "people", "tx", "msi", "goals", "cortes"]) {
+  for (const k of ["accounts", "categories", "people", "tx", "msi", "goals", "cortes", "subs"]) {
     if (!Array.isArray(out[k])) out[k] = d[k];
   }
   if (!out.categories.length) out.categories = DEFAULT_CATEGORIES();

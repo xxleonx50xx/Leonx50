@@ -26,6 +26,8 @@ const routes = [
   [/^#\/cortes$/, () => V.cortes(ui), "mas", "cortes"],
   [/^#\/mas$/, () => V.more(), "mas", ""],
   [/^#\/movs$/, () => V.movements(ui), "mas", "movs"],
+  [/^#\/analisis$/, () => V.analysisView(ui), "mas", "analisis"],
+  [/^#\/suscripciones$/, () => V.subsView(ui), "mas", "subs"],
   [/^#\/metas$/, () => V.goals(), "mas", "metas"],
   [/^#\/meta\/(.+)$/, (m) => V.goalDetail(m[1]), "mas", "metas"],
   [/^#\/msi$/, () => V.msiList(ui), "mas", "msi"],
@@ -39,7 +41,7 @@ const TABS = [["inicio", "#/inicio", "layout-dashboard", "Inicio"], ["cuentas", 
 const SIDE = [
   ["inicio", "#/inicio", "layout-dashboard", "Inicio"], ["movs", "#/movs", "list", "Movimientos"], ["cuentas", "#/cuentas", "wallet", "Cuentas"],
   ["casa", "#/casa", "house", "Casa"], ["personas", "#/personas", "users", "Personas"], ["cortes", "#/cortes", "scissors", "Cortes"],
-  ["msi", "#/msi", "calendar", "MSI"], ["metas", "#/metas", "target", "Metas"], null,
+  ["msi", "#/msi", "calendar", "MSI"], ["subs", "#/suscripciones", "repeat", "Suscripciones"], ["analisis", "#/analisis", "sliders-horizontal", "Análisis"], ["metas", "#/metas", "target", "Metas"], null,
   ["categorias", "#/categorias", "tag", "Categorías"], ["respaldo", "#/respaldo", "download", "Respaldo"], ["ajustes", "#/ajustes", "settings", "Ajustes"],
 ];
 function buildNav() {
@@ -182,6 +184,9 @@ const actions = {
   editGoal: (d) => F.goalForm(st.byId("goals", d.id)),
   contrib: (d) => { const g = st.byId("goals", d.id); F.contributionForm(g, d.cid ? g.contributions.find((c) => c.id === d.cid) : null); },
   budget: () => F.budgetForm(),
+  newSub: () => F.subForm(),
+  editSub: (d) => F.subForm(st.byId("subs", d.id)),
+  anMonths: (d) => { ui.anMonths = Number(d.n); render(); },
   newCat: (d) => F.categoryForm(null, d.kind),
   editCat: (d) => F.categoryForm(st.category(d.id)),
   month: (d) => { ui.month = shiftMonth(ui.month, Number(d.d)); render(); },

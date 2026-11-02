@@ -8,6 +8,7 @@ import { bar, kv, moneyCls } from "./ui.js";
 import {
   compute, cardInfo, msiInfo, personEvents, planInfo, monthStats, corteSummary, openCorteStart, corteDefaultEnd,
   fundStats, goalProgress, naturalBalance, txAccountEffects, EVENT_LABEL, houseStats, houseLine, isHouse, categoriesByUse,
+  analysis, subInfo, subMonthly,
 } from "./calc.js";
 import { icon, brandFor, logo, iconTile } from "./logos.js";
 import { accountTile, categoryTile } from "./quick.js";
@@ -77,6 +78,7 @@ function txAmount(t, accountId) {
 }
 function splitBadge(t) {
   const out = [];
+  if (t.hist) out.push(`<span class="tag">histórico</span>`);
   if (isHouse(S(), t)) out.push(`<span class="tag house">${icon("house")}Casa</span>`);
   for (const x of t.shares || []) if (x.amount) out.push(`<span class="tag">${esc(pName(x.personId))} ${money0(x.amount)}</span>`);
   if (t.type === "debt" && t.dir === "iOwe" && t.total) out.push(`<span class="tag">tu parte ${money0(t.amount)}</span>`);
@@ -219,6 +221,10 @@ export function home(ui) {
       <div class="t2">${ci.nextDue ? `Pago ${fmtDate(ci.nextDue)} (${relDays(ci.nextDue)})` : ""}${ci.nextCut ? ` · corte ${relDays(ci.nextCut)}` : ""}</div></div>
       <div class="end"><b class="amt">${money(ci.debt)}</b></div></a>`).join("")}</div>`) : "";
 
+  const actSubs = (s.subs || []).filter((x) => x.active);
+  const subsCard = actSubs.length ? section("Suscripciones", `<a class="card" href="#/suscripciones">
+      <div class="stats2"><div><small>Al mes</small><b>${money(actSubs.reduce((q, x) => q + subMonthly(x), 0))}</b></div><div><small>Por revisar</small><b class="${actSubs.some((x) => subInfo(s, x, brandFor).status !== "ok") ? "warn-t" : ""}">${actSubs.filter((x) => subInfo(s, x, brandFor).status !== "ok").length}</b></div></div>
+      <div class="logo-strip">${actSubs.slice(0, 8).map((x) => brandFor(x.name) ? logo(brandFor(x.name), "xs") : iconTile("repeat", "", "xs")).join("")}</div></a>`, link("Ver", "#/suscripciones")) : "";
   const goals = s.goals.length ? section("Metas de ahorro", `<div class="card list">${s.goals.slice(0, 3).map((g) => goalRow(g, C)).join("")}</div>`, link("Ver todas", "#/metas")) : "";
   const recent = [...s.tx].sort(sortTx).slice(0, ui.desk ? 10 : 6);
   const recentHtml = section("Últimos movimientos", recent.length
@@ -226,8 +232,8 @@ export function home(ui) {
     : `<p class="muted">Aún no hay movimientos. Toca ＋ para registrar.</p>`, link("Ver todos", "#/movs"));
 
   const html = ui.desk
-    ? `${alerts}<div class="dash"><div class="dash-a">${hero}${partner}${house}</div><div class="dash-b">${month}${cards}${goals}</div></div>${recentHtml}`
-    : `${hero}${alerts}${quick}${partner}${house}${month}${cards}${goals}${recentHtml}`;
+    ? `${alerts}<div class="dash"><div class="dash-a">${hero}${partner}${house}${subsCard}</div><div class="dash-b">${month}${cards}${goals}</div></div>${recentHtml}`
+    : `${hero}${alerts}${quick}${partner}${house}${month}${cards}${subsCard}${goals}${recentHtml}`;
   return { title: `Hola${s.settings.name ? ", " + s.settings.name : ""}`, html };
 }
 
@@ -350,6 +356,7 @@ export function accountDetail(id, ui) {
   // historial con saldo acumulado (para comparar con el estado de cuenta)
   const entries = [];
   for (const t of s.tx) {
+    if (t.hist) continue; // el histórico importado no forma parte del saldo
     const v = txAccountEffects(t).filter(([x]) => x === a.id).reduce((q, [, y]) => q + y, 0);
     if (v || t.accountId === a.id || t.toAccountId === a.id) entries.push({ t, v, date: t.date, createdAt: t.createdAt || 0 });
   }
@@ -583,6 +590,8 @@ export function more() {
     ["#/cortes", "scissors", "Cortes con tu pareja", st.partner()?.name || "Sin configurar"],
     ["#/movs", "list", "Movimientos", `${s.tx.length} registrados`],
     ["#/fondo", "house-plus", "Fondo común", s.settings.fund.accountId ? accName(s.settings.fund.accountId) : "Sin configurar"],
+    ["#/analisis", "sliders-horizontal", "Análisis y promedios", "Cuánto gastas en promedio"],
+    ["#/suscripciones", "repeat", "Suscripciones", `${(s.subs || []).filter((x) => x.active).length} activas`],
     ["#/metas", "target", "Metas de ahorro", `${s.goals.length} metas`],
     ["#/msi", "calendar", "Meses sin intereses", `${s.msi.filter((m) => !msiInfo(m).done).length} vigentes`],
     ["#/cuadrar", "scale", "Cuadrar cuentas", ""],
@@ -788,4 +797,92 @@ export function settings() {
     </div>
     <p class="fine pad">Los cambios se guardan solos.</p>`;
   return { title: "Ajustes", back: true, html };
+}
+
+// ================= ANÁLISIS =================
+export function analysisView(ui) {
+  const s = S();
+  const n = ui.anMonths || 12;
+  const A = analysis(s, n, brandFor);
+  const p = st.partner();
+  const per = `<div class="tabs">${[3, 6, 12].map((k) => `<a href="#/analisis" data-act="anMonths" data-n="${k}" class="${n === k ? "on" : ""}">${k} meses</a>`).join("")}</div>`;
+  if (!A.count) return { title: "Análisis", back: !ui.desk, html: per + empty("sliders-horizontal", "Sin datos suficientes", "Registra gastos o importa tu historial para ver promedios.") };
+  const curM = A.byMonth[A.cur];
+  const maxM = Math.max(...[...A.months, A.cur].map((m) => A.byMonth[m].spend), 1);
+  const chart = `<div class="mchart">${[...A.months, A.cur].map((m) => {
+    const x = A.byMonth[m];
+    return `<div class="mcol ${m === A.cur ? "cur" : ""}" title="${fmtMonth(m)}: ${money0(x.spend)}"><div class="mbar"><i style="height:${((x.spend / maxM) * 100).toFixed(1)}%"></i><i class="mine" style="height:${((x.mine / maxM) * 100).toFixed(1)}%"></i></div><small>${fmtMonth(m).slice(0, 3)}</small></div>`;
+  }).join("")}</div><p class="fine">Barra completa = gasto total · parte oscura = tu parte. El último mes (en curso) va aparte.</p>`;
+  let html = per + `
+    <div class="${ui.desk ? "dash" : ""}"><div>
+    <div class="hero">
+      <div class="hero-top"><span>Gasto promedio mensual · últimos ${n} meses</span></div>
+      <div class="big">${money0(A.avg)}</div>
+      <div class="hero-row">
+        <div><small>Mi parte</small><b>${money0(A.avgMine)}</b></div>
+        <div><small>${p ? esc(p.name) + " y otros" : "Otros"}</small><b>${money0(A.avgOthers)}</b></div>
+        <div><small>Ingreso por trabajo</small><b class="pos">${money0(A.avgWork)}</b></div>
+      </div>
+    </div>
+    <div class="card">
+      ${kv("Ingreso promedio por trabajo", money(A.avgWork))}
+      ${kv("Ingreso mediano por mes", `${money(A.medianWork)} <small>(la mitad de los meses ganas menos que esto)</small>`)}
+      ${kv("Lo que te queda (trabajo − tu parte)", `<span class="${moneyCls(A.saving)}">${money(A.saving)}</span> <small>al mes</small>`)}
+      ${kv("Este mes vas", `${money0(curM.spend)} <small>de ${money0(A.avg)} promedio</small>`)}
+    </div></div><div>
+    ${section("Mes a mes", `<div class="card">${chart}</div>`)}
+    </div></div>`;
+  const top = A.merchants.slice(0, ui.desk ? 40 : 15);
+  const tileFor = (m) => (brandFor(m.name) ? logo(brandFor(m.name), "xs") : m.sample?.categoryId ? categoryTile(catOf(m.sample.categoryId), "xs") : iconTile("receipt", "", "xs"));
+  html += section("¿En qué se va? · por comercio", ui.desk
+    ? table([{ label: "Comercio / concepto" }, { label: "Promedio al mes", cls: "num" }, { label: "Total", cls: "num" }, { label: "Veces" }, { label: "Meses" }, { label: "Ticket promedio", cls: "num" }, { label: "Mi parte", cls: "num" }, { label: "Tarjeta más usada" }],
+      top.map((m) => ({ cells: [`<div class="cell-main">${tileFor(m)}<b>${esc(m.name)}</b></div>`, `<b class="amt">${money0(m.avg)}</b>`, money0(m.total), String(m.n), `${m.months}/${n}`, money0(m.ticket), money0(m.mine), m.card ? esc(accName(m.card)) : "—"] })))
+    : `<div class="card list">${top.map((m) => `<div class="row static">${tileFor(m).replace("xs", "")}<div class="mid"><div class="t1">${esc(m.name)}</div><div class="t2">${m.n} veces · ${m.months} de ${n} meses · ticket ${money0(m.ticket)}${m.card ? " · " + esc(accName(m.card)) : ""}</div></div><div class="end"><b class="amt">${money0(m.avg)}</b><small>al mes</small></div></div>`).join("")}</div>`);
+  const maxC = A.cats[0]?.avg || 1;
+  html += `<div class="${ui.desk ? "dash" : ""}">` + section("Por categoría", `<div class="card">${A.cats.map((c) => {
+    const cat = catOf(c.id);
+    return `<div class="cat-row">${categoryTile(cat, "xs")}<span>${cat ? esc(cat.name) : "Sin categoría"}</span><b>${money0(c.avg)}<small class="muted"> /mes</small></b>${bar((c.avg / maxC) * 100)}</div>`;
+  }).join("")}</div>`) + section("Por tarjeta", `<div class="card list">${A.cards.map((c) => { const a = st.account(c.id); return a ? `<a class="row" href="#/cuenta/${a.id}">${accountTile(a)}<div class="mid"><div class="t1">${esc(a.name)}</div><div class="t2">${money0(c.total)} en ${n} meses</div></div><div class="end"><b class="amt">${money0(c.avg)}</b><small>al mes</small></div></a>` : ""; }).join("")}</div>`) + `</div>`;
+  html += `<p class="fine pad">No cuenta pagos a tarjetas, retiros ni préstamos. Las mensualidades MSI cuentan en el mes que se cobran. Incluye el historial importado del Excel.</p>`;
+  return { title: "Análisis", back: !ui.desk, html };
+}
+
+// ================= SUSCRIPCIONES =================
+const SUB_STATUS = {
+  ok: ["circle-check", "pos", "Cobro al día"],
+  missing: ["triangle-alert", "warn-t", "No se ha visto el cobro — ¿cancelada o cambió de nombre?"],
+  card: ["credit-card", "warn-t", "Se cobró en otra tarjeta"],
+  amount: ["info", "warn-t", "El último cobro fue de otro monto"],
+  off: ["x", "muted", "Inactiva"],
+};
+export function subsView(ui) {
+  const s = S();
+  const list = [...(s.subs || [])].sort((a, b) => (b.active - a.active) || subMonthly(b) - subMonthly(a));
+  const act = list.filter((x) => x.active);
+  const total = act.reduce((q, x) => q + subMonthly(x), 0);
+  const byCard = {};
+  for (const x of act) byCard[x.accountId || "_"] = (byCard[x.accountId || "_"] || 0) + subMonthly(x);
+  const action = `<button class="icon-btn" data-act="newSub" aria-label="Nueva">${icon("plus")}</button>`;
+  if (!list.length) return { title: "Suscripciones", back: !ui.desk, action, html: empty("repeat", "Sin suscripciones", "Agrega Netflix, iCloud, Spotify… y asígnale a cada una la tarjeta donde se cobra.", `<button class="btn primary" data-act="newSub">${icon("plus")}<span>Agregar</span></button>`) };
+  let html = `<div class="hero"><div class="hero-top"><span>Suscripciones activas</span></div><div class="big">${money(total)}<small class="muted" style="font-size:15px;font-weight:500"> /mes</small></div>
+    <small class="hero-note">${money0(total * 12)} al año · ${act.length} activas</small>
+    <div class="hero-row">${Object.entries(byCard).map(([id, v]) => `<div><small>${id === "_" ? "Sin tarjeta" : esc(accName(id))}</small><b>${money0(v)}</b></div>`).join("")}</div></div>`;
+  const rows = list.map((x) => ({ x, i: subInfo(s, x, brandFor) }));
+  const tile = (x) => (brandFor(x.name) ? logo(brandFor(x.name), ui.desk ? "xs" : "") : iconTile("repeat", "", ui.desk ? "xs" : ""));
+  if (ui.desk) {
+    html += table([{ label: "Suscripción" }, { label: "Monto", cls: "num" }, { label: "Al mes", cls: "num" }, { label: "Tarjeta asignada" }, { label: "Siguiente cobro" }, { label: "Último cobro visto" }, { label: "Estado" }],
+      rows.map(({ x, i }) => ({ attrs: `data-act="editSub" data-id="${x.id}" class="click"`, cells: [
+        `<div class="cell-main">${tile(x)}<div><b>${esc(x.name)}</b>${x.note ? `<small>${esc(x.note)}</small>` : ""}</div></div>`, `${money(x.amount)} <small class="muted">${x.freq === "anual" ? "/año" : "/mes"}</small>`, money(i.monthly),
+        x.accountId ? `<div class="cell-main">${st.account(x.accountId) ? accountTile(st.account(x.accountId), "xs") : ""}${esc(accName(x.accountId))}</div>` : `<span class="warn-t">Sin asignar</span>`,
+        x.active && i.next ? fmtDate(i.next, { plain: true }) : "—",
+        i.last ? `${fmtDate(i.last.date, { plain: true })} · ${money(i.last.amount)} · ${esc(accName(i.last.accountId))}` : `<span class="muted">nunca</span>`,
+        `<span class="${SUB_STATUS[i.status][1]} nowrap">${icon(SUB_STATUS[i.status][0])} ${SUB_STATUS[i.status][2].split(" — ")[0]}</span>`] })));
+  } else {
+    html += `<div class="card list">${rows.map(({ x, i }) => `<button class="row" data-act="editSub" data-id="${x.id}">${tile(x)}
+      <div class="mid"><div class="t1">${esc(x.name)}</div><div class="t2">${x.accountId ? esc(accName(x.accountId)) : '<span class="warn-t">sin tarjeta</span>'}${x.active && i.next ? ` · cobro ${fmtDate(i.next)}` : ""}</div>
+      <div class="t2 ${SUB_STATUS[i.status][1]}">${icon(SUB_STATUS[i.status][0], "inline")} ${SUB_STATUS[i.status][2]}${i.last && i.status !== "ok" && i.status !== "off" ? ` (${fmtDate(i.last.date)}, ${money0(i.last.amount)}, ${esc(accName(i.last.accountId))})` : ""}</div></div>
+      <div class="end"><b class="amt ${x.active ? "" : "muted"}">${money(x.amount)}</b><small>${x.freq === "anual" ? "al año" : "al mes"}</small></div></button>`).join("")}</div>`;
+  }
+  html += `<p class="fine pad">La app busca el cobro real en tus movimientos (por nombre o logo) para avisarte si dejó de cobrarse, si llegó a otra tarjeta o si cambió el monto.</p>`;
+  return { title: "Suscripciones", back: !ui.desk, action, html };
 }
