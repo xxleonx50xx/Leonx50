@@ -1,7 +1,7 @@
 // ================= Service Worker · Cuadra =================
 // "Red primero" para el código (siempre la versión más nueva) y respaldo
 // desde caché para que la app abra sin internet.
-const VERSION = "v9";
+const VERSION = "v10";
 const CACHE = "cuadra-" + VERSION;
 const ASSETS = [
   "./", "./index.html", "./css/styles.css", "./manifest.webmanifest",

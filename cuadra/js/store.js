@@ -127,6 +127,8 @@ export function normalize(o) {
   out.categories.forEach((c) => { if (!c.ico && CAT_ICO[c.id]) c.ico = CAT_ICO[c.id]; });
   out.settings.catUse ||= {};
   out.settings.limits ||= {};
+  out.settings.inboxToken ||= Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(16).padStart(2, "0")).join("");
+  out.inbox ||= [];
   out.goals.forEach((g) => (g.contributions ||= []));
   out.tx.forEach((t) => (t.shares ||= []));
   out.msi.forEach((m) => (m.shares ||= []));

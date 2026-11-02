@@ -952,3 +952,11 @@ body {
 .lg-mark { background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 85%, #fff 15%), var(--accent-strong)); }
 .avatar { background: linear-gradient(160deg, #ffd8a8, #f59f00); color: #3b2300; }
 .sidebar { background: color-mix(in srgb, var(--surface) 70%, transparent); backdrop-filter: blur(10px); }
+.qa-freq { margin-top: -4px; }
+.qa-freq .pill-btn { flex: none; padding: 6px 12px 6px 6px; }
+.qa-freq .pill-btn:not(:has(.tile)) { padding-left: 12px; }
+.qa-freq .tile.xs { width: 22px; height: 22px; }
+code.mono { font-family: ui-monospace, Menlo, monospace; font-size: 12px; background: var(--surface-2); padding: 2px 6px; border-radius: 6px; word-break: break-all; }
+.guide ol { margin: 0 0 10px; padding-left: 20px; display: flex; flex-direction: column; gap: 10px; line-height: 1.5; color: var(--ink-2); }
+.guide b { color: var(--ink); }
+.inbox-card .row { padding-left: 0; padding-right: 0; }

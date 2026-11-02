@@ -199,6 +199,8 @@ export function incomeForm(t = null, preset = {}) {
       <div class="field"><span class="lbl">Tipo</span>${chips("categoryId", categoryOptions("income"), v.categoryId, { cls: "wrap small" })}</div>
       <div data-show-if="categoryId=i_aporte|i_reemb">${field("¿De parte de quién?", select("personId", peopleOptions("Yo"), v.personId))}</div>
       ${field("Fecha", dateInput("date", v.date))}
+      ${!t ? `<div data-show-if="categoryId=i_trabajo|i_venta|i_otro|i_regalo">${toggle("cashPart", "Una parte me la quedé en efectivo", false, "Ej. Leo te dio $8,000 y $4,000 te los quedaste en efectivo")}
+        <div data-show-if="cashPart=on">${field("¿Cuánto en efectivo?", numInput("cashAmt", "", "4000"))}</div></div>` : ""}
       <p class="hint" data-show-if="categoryId=i_bono">Un bono en una tarjeta de crédito reduce su deuda.</p>
       ${!t ? `<div data-show-if="categoryId=i_bono">${toggle("share", "Le paso la mitad a quien referí", false)}
         <div data-show-if="share=on">
@@ -220,6 +222,16 @@ export function incomeForm(t = null, preset = {}) {
         personId: ["i_aporte", "i_reemb"].includes(categoryId) ? fd.get("personId") || "" : "",
         shares: [], createdAt: t?.createdAt || Date.now(),
       });
+      if (!t && fd.get("cashPart")) {
+        const cash = parseAmount(fd.get("cashAmt") || "");
+        const cashAcc = S().accounts.find((x) => x.type === "cash" && !x.archived);
+        if (cash > 0 && cash < amount && cashAcc && cashAcc.id !== accountId) {
+          // el ingreso se reparte: una parte a la cuenta y otra al efectivo
+          const last = S().tx[S().tx.length - 1];
+          last.amount = round2(amount - cash);
+          st.upsert("tx", { ...last, id: uid(), accountId: cashAcc.id, amount: cash, concept: `${last.concept || "Ingreso"} (efectivo)`, createdAt: Date.now() + 1 });
+        }
+      }
       if (!t && categoryId === "i_bono" && fd.get("share")) {
         const half = parseAmount(fd.get("shareAmt") || "") || round2(amount / 2);
         st.upsert("tx", { id: uid(), type: "expense", amount: half, accountId: fd.get("shareAcc") || defaultAccountId((a) => a.type === "debit"), categoryId: "",
@@ -426,7 +438,13 @@ export function reconcileForm(accountId) {
       ${credit && Number(a.limit) ? `<div class="field"><span class="lbl">¿Qué ves en tu banco?</span>${segmented("mode", [{ value: "debt", label: "Deuda total" }, { value: "avail", label: "Crédito disponible" }], "debt")}</div>` : ""}
       ${a.type === "cash" ? `<details class="counter" open><summary>Contar billetes y monedas</summary><div class="denoms">${DENOMS.map((d) => `<label><span>$${d}</span><input inputmode="numeric" data-denom="${d}" placeholder="0"/></label>`).join("")}</div></details>` : ""}
       ${field(credit ? "Lo que dice tu banco" : "Saldo real", amountInput("real", ""))}
-      <div class="recon-diff" id="rDiff"></div>`,
+      <div class="recon-diff" id="rDiff"></div>
+      <div id="rWhat" class="hidden">
+        <div class="field"><span class="lbl">¿Qué fue la diferencia?</span>${segmented("what", [{ value: "adjust", label: "Ajuste" }, { value: "expense", label: "Gasto sin anotar" }, { value: "income", label: "Ingreso sin anotar" }], "adjust")}</div>
+        <div data-show-if="what=expense|income">${field("Concepto", textInput("whatConcept", "", "Ej. efectivo de Leo, Oxxo…"))}</div>
+        <div data-show-if="what=expense"><div class="field"><span class="lbl">Categoría</span>${chips("whatCat", categoryOptions("expense"), "c_otros", { cls: "wrap small" })}</div></div>
+        <div data-show-if="what=income"><div class="field"><span class="lbl">Tipo</span>${chips("whatInc", categoryOptions("income"), "i_trabajo", { cls: "wrap small" })}</div></div>
+      </div>`,
     submitLabel: "Guardar cuadre",
     onMount: (form) => {
       const out = form.querySelector("#rDiff");
@@ -454,13 +472,31 @@ export function reconcileForm(accountId) {
       });
       form.addEventListener("change", upd);
       form._realBal = realBal;
+      wireConditional(form);
+      const what = form.querySelector("#rWhat");
+      const updWhat = () => {
+        const r = realBal();
+        const diff = r == null ? 0 : round2(r - appBal);
+        what.classList.toggle("hidden", Math.abs(diff) < 0.01);
+        // si tienes MÁS dinero del que la app cree, lo típico es un ingreso sin anotar; si tienes MENOS, un gasto
+        if (!what.dataset.touched) form.elements.what.value = Math.abs(diff) < 0.01 ? "adjust" : (credit ? diff < 0 : diff < 0) ? "expense" : "income";
+        form._apply();
+      };
+      form.addEventListener("input", updWhat);
+      form.addEventListener("change", (e) => { if (e.target.name === "what") what.dataset.touched = "1"; updWhat(); });
     },
     onSubmit: (form) => {
       const r = form._realBal();
       if (r == null) return fieldError(form, "real", "Escribe el saldo real");
       const diff = round2(r - appBal);
       if (Math.abs(diff) >= 0.01) {
-        st.upsert("tx", { id: uid(), type: "adjust", accountId: a.id, amount: diff, concept: "Ajuste de cuadre", reconcile: true, date: today(), shares: [], createdAt: Date.now() });
+        const what = form.elements.what?.value || "adjust";
+        const concept = form.elements.whatConcept?.value.trim();
+        const base = { id: uid(), accountId: a.id, date: today(), shares: [], createdAt: Date.now(), reconcile: true };
+        // gasto: el saldo bajó (o la deuda subió); ingreso: el saldo subió (o la deuda bajó)
+        if (what === "expense" && diff < 0) st.upsert("tx", { ...base, type: "expense", amount: -diff, categoryId: form.elements.whatCat?.value || "c_otros", concept: concept || "Gasto sin anotar (cuadre)" });
+        else if (what === "income" && diff > 0) st.upsert("tx", { ...base, type: "income", amount: diff, categoryId: form.elements.whatInc?.value || "i_otro", concept: concept || "Ingreso sin anotar (cuadre)", personId: "" });
+        else st.upsert("tx", { ...base, type: "adjust", amount: diff, concept: "Ajuste de cuadre" });
       }
       a.lastReconciled = today();
       a.lastReconciledBalance = r;

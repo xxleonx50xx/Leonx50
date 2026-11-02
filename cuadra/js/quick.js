@@ -51,6 +51,7 @@ export function quickAdd(mode = "expense", preset = {}) {
       <div class="qa-amount"><span class="cur">$</span><span class="val" id="qaVal">0</span></div>
       <div class="qa-expr" id="qaExpr"></div>
       <label class="qa-concept"><span id="qaLogo">${icon("pencil")}</span><input name="concept" placeholder="¿En qué? (opcional)" value="${esc(preset.concept || "")}" autocomplete="off"/></label>
+      <div class="qa-row scroll qa-freq" id="qaFreq"></div>
       <div class="qa-row" id="qaPayer"></div>
       <div class="qa-row scroll" id="qaAcc"></div>
       <div class="qa-row scroll" id="qaCat"></div>
@@ -110,6 +111,44 @@ export function quickAdd(mode = "expense", preset = {}) {
     $("#qaLogo").innerHTML = b ? logo(b, "xs") : icon("pencil");
   };
 
+  // ---- lo que más registras y autollenado con tu historial ----
+  const normc = (x) => String(x || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]/g, " ").replace(/\b\d+\b/g, "").trim();
+  const recentExp = s.tx.filter((t) => t.type === "expense" && !t.excluded && t.concept).sort((a, b) => (a.date < b.date ? 1 : -1));
+  const freq = (() => {
+    const cut = new Date(); cut.setDate(cut.getDate() - 150);
+    const lim = cut.toISOString().slice(0, 10);
+    const m = new Map();
+    for (const t of recentExp) {
+      if (t.date < lim) break;
+      const b = brandFor(t.concept);
+      const k = b ? b.name : normc(t.concept).split(" ").slice(0, 2).join(" ");
+      if (!k || k.length < 3) continue;
+      const x = m.get(k) || { k, n: 0, label: b ? b.name : t.concept.replace(/\s*\d+\s*\/\s*\d+.*$/, "").trim() };
+      x.n++; m.set(k, x);
+    }
+    return [...m.values()].sort((a, b) => b.n - a.n).slice(0, 8);
+  })();
+  const match = (concept) => {
+    const n = normc(concept);
+    if (n.length < 3) return null;
+    const b = brandFor(concept);
+    const first = n.split(" ")[0];
+    return recentExp.find((t) => (b && brandFor(t.concept)?.id === b.id) || normc(t.concept).startsWith(n) || (first.length >= 4 && normc(t.concept).split(" ")[0] === first)) || null;
+  };
+  const autofill = () => {
+    if (state.mode === "income") return;
+    const t = match(form.elements.concept.value);
+    if (!t) return;
+    if (!state.userCat && t.categoryId) state.categoryId = t.categoryId;
+    if (!state.userAcc && !preset.accountId && t.accountId && s.accounts.some((a) => a.id === t.accountId && !a.archived)) state.accountId = t.accountId;
+    if (state.mode === "expense" && !state.userSplit) { const sh = (t.shares || [])[0]; state.split = sh && sh.personId === s.settings.partnerId ? Math.round(sh.pct || (sh.amount / t.amount) * 100) : 0; }
+  };
+  const paintFreq = () => {
+    const f = form.querySelector("#qaFreq");
+    f.classList.toggle("hidden", !!form.elements.concept.value || state.mode === "income" || !freq.length);
+    f.innerHTML = freq.map((x) => `<button type="button" class="pill-btn" data-freq="${esc(x.label)}">${brandFor(x.label) ? logo(brandFor(x.label), "xs") : ""}${esc(x.label)}</button>`).join("");
+  };
+
   const press = (k) => {
     if (k === "save") return save();
     if (k === "back") state.expr = state.expr.slice(0, -1);
@@ -152,6 +191,7 @@ export function quickAdd(mode = "expense", preset = {}) {
     if (state.accountId && state.mode !== "income") s.settings.lastAccountId = state.accountId;
     st.save();
     closeSheet();
+    preset.onSaved?.();
     refresh();
     const lim = state.categoryId && state.mode !== "income" ? limitsStatus(s, monthKey(state.date)).rows.find((x) => x.id === state.categoryId) : null;
     const cname = s.categories.find((c) => c.id === state.categoryId)?.name;
@@ -164,9 +204,10 @@ export function quickAdd(mode = "expense", preset = {}) {
     if (t.dataset.k) return press(t.dataset.k);
     if (t.dataset.mode) { state.mode = t.dataset.mode; state.categoryId = null; state.accountId = null; return paint(); }
     if (t.dataset.payer) { state.payer = t.dataset.payer; return paint(); }
-    if (t.dataset.acc) { state.accountId = t.dataset.acc; return paint(); }
-    if (t.dataset.cat) { state.categoryId = state.categoryId === t.dataset.cat ? null : t.dataset.cat; return paint(); }
-    if (t.dataset.split !== undefined) { const pp = Number(s.settings.partnerPct) || 40; state.split = state.split === 0 ? pp : state.split === pp && pp !== 50 ? 50 : 0; return paint(); }
+    if (t.dataset.acc) { state.accountId = t.dataset.acc; state.userAcc = true; return paint(); }
+    if (t.dataset.cat) { state.categoryId = state.categoryId === t.dataset.cat ? null : t.dataset.cat; state.userCat = true; return paint(); }
+    if (t.dataset.freq) { form.elements.concept.value = t.dataset.freq; updLogo(); autofill(); paintFreq(); return paint(); }
+    if (t.dataset.split !== undefined) { state.userSplit = true; const pp = Number(s.settings.partnerPct) || 40; state.split = state.split === 0 ? pp : state.split === pp && pp !== 50 ? 50 : 0; return paint(); }
     if (t.dataset.more !== undefined) { closeSheet(true); return openFull("menu"); }
     if (t.dataset.full !== undefined) {
       const amount = parseAmount(state.expr);
@@ -175,7 +216,8 @@ export function quickAdd(mode = "expense", preset = {}) {
     }
   });
   form.addEventListener("change", (e) => { if (e.target.name === "qaDate") { state.date = e.target.value || today(); paint(); } });
-  form.elements.concept.addEventListener("input", updLogo);
+  let acT = null;
+  form.elements.concept.addEventListener("input", () => { updLogo(); paintFreq(); clearTimeout(acT); acT = setTimeout(() => { autofill(); paint(); }, 250); });
   // teclado físico (escritorio)
   const onKey = (e) => {
     if (!document.body.contains(form)) return document.removeEventListener("keydown", onKey);
@@ -189,6 +231,8 @@ export function quickAdd(mode = "expense", preset = {}) {
     e.preventDefault();
   };
   document.addEventListener("keydown", onKey);
+  if (preset.autofill || preset.concept) autofill();
   paint();
+  paintFreq();
   updLogo();
 }

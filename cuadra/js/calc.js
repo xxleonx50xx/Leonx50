@@ -87,7 +87,11 @@ export function compute(S) {
   const assets = S.accounts.filter((a) => !a.archived).reduce((s, a) => s + acc[a.id], 0);
   const owedToMe = Object.values(ppl).filter((v) => v > 0).reduce((s, v) => s + v, 0);
   const iOwe = Object.values(ppl).filter((v) => v < 0).reduce((s, v) => s + v, 0);
-  return { acc, ppl, msi, netWorth: r2(assets + owedToMe + iOwe), owedToMe: r2(owedToMe), iOwe: r2(-iOwe) };
+  // MSI que aún debes (parte de la deuda de las tarjetas)
+  const msiDebt = r2(S.msi.filter((m) => { const a = S.accounts.find((x) => x.id === m.accountId); return a && !a.archived; }).reduce((q, m) => q + msi[m.id].remaining, 0));
+  const full = r2(assets + owedToMe + iOwe);
+  const noMsi = S.settings.nwExcludeMsi !== false; // por defecto: como en tu Excel, sin restar los MSI
+  return { acc, ppl, msi, msiDebt, netWorthFull: full, netWorth: noMsi ? r2(full + msiDebt) : full, nwNoMsi: noMsi, owedToMe: r2(owedToMe), iOwe: r2(-iOwe) };
 }
 
 // ---------- Eventos de una persona (para historial y cortes) ----------

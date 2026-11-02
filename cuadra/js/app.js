@@ -6,7 +6,8 @@ import { toast, closeSheet, sheetOpen } from "./ui.js";
 import * as V from "./views.js";
 import * as F from "./forms.js";
 import { icon } from "./logos.js";
-import { bindQuick } from "./quick.js";
+import { bindQuick, quickAdd } from "./quick.js";
+import { brandFor } from "./logos.js";
 const QuickBind = () => bindQuick(() => render(), (m, p) => F.openFull(m, p));
 
 const $ = (s) => document.querySelector(s);
@@ -31,6 +32,7 @@ const routes = [
   [/^#\/analisis$/, () => V.analysisView(ui), "mas", "analisis"],
   [/^#\/suscripciones$/, () => V.subsView(ui), "mas", "subs"],
   [/^#\/limites$/, () => V.limitsView(ui), "mas", "limites"],
+  [/^#\/applepay$/, () => V.applePayGuide(), "mas", "ajustes"],
   [/^#\/metas$/, () => V.goals(), "mas", "metas"],
   [/^#\/meta\/(.+)$/, (m) => V.goalDetail(m[1]), "mas", "metas"],
   [/^#\/msi$/, () => V.msiList(ui), "mas", "msi"],
@@ -74,6 +76,7 @@ matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => app
 function renderNow() {
   applyTheme();
   if (!st.hasData()) return renderWelcome();
+  if (location.hash.startsWith("#/nuevo")) return handleDeepLink();
   $("#app").classList.remove("hidden");
   $("#welcome").classList.add("hidden");
   const h = location.hash || "#/inicio";
@@ -98,6 +101,88 @@ function renderNow() {
 deskMQ.addEventListener("change", (e) => { ui.desk = e.matches; render(); });
 QuickBind();
 F.bindRefresh(render);
+
+// ---------- Compras que llegan de fuera (Atajo de Apple Pay / buzón) ----------
+function cleanAmount(v) {
+  const m = String(v || "").replace(/[^0-9.,-]/g, "");
+  // "1.234,50" o "1,234.50" → 1234.50
+  const norm = /,\d{1,2}$/.test(m) && m.includes(".") ? m.replace(/\./g, "").replace(",", ".") : m.replace(/,/g, "");
+  return parseAmount(norm);
+}
+function accountForCard(name) {
+  const s = st.state();
+  const n = String(name || "").toLowerCase();
+  if (!n) return null;
+  const b = brandFor(n);
+  const accs = s.accounts.filter((a) => !a.archived);
+  return (b && accs.find((a) => brandFor(a.name)?.id === b.id && (a.type === "credit") === !/d[eé]bito/.test(n))) ||
+    (b && accs.find((a) => brandFor(a.name)?.id === b.id)) ||
+    accs.find((a) => n.includes(a.name.toLowerCase()) || a.name.toLowerCase().includes(n.split(" ")[0])) || null;
+}
+function purchasePreset(it) {
+  const acc = accountForCard(it.tarjeta);
+  return { amount: cleanAmount(it.monto) || "", concept: String(it.comercio || "").trim(), accountId: acc?.id, date: /^\d{4}-\d{2}-\d{2}$/.test(it.fecha || "") ? it.fecha : undefined, autofill: true };
+}
+function handleDeepLink() {
+  const q = new URLSearchParams(location.hash.split("?")[1] || "");
+  const it = { monto: q.get("monto") || q.get("amount"), comercio: q.get("comercio") || q.get("merchant"), tarjeta: q.get("tarjeta") || q.get("card"), fecha: q.get("fecha") };
+  history.replaceState(null, "", location.pathname + "#/inicio");
+  renderNow();
+  setTimeout(() => quickAdd("expense", purchasePreset(it)), 50);
+}
+async function pullInbox() {
+  const s = st.state();
+  if (!s?.settings.inboxUrl || !s.settings.inboxToken) return;
+  try {
+    const r = await fetch(`${s.settings.inboxUrl}?token=${encodeURIComponent(s.settings.inboxToken)}`, { cache: "no-store" });
+    const j = await r.json();
+    if (j.items?.length) { s.inbox.push(...j.items); st.save(); render(); toast(`${j.items.length} compra(s) de Apple Pay por registrar`); }
+  } catch {}
+}
+function openInboxItem(id) {
+  const s = st.state();
+  const it = s.inbox.find((x) => x.id === id);
+  if (!it) return;
+  quickAdd("expense", { ...purchasePreset(it), onSaved: () => { s.inbox = s.inbox.filter((x) => x.id !== id); st.save(); render(); } });
+}
+window.addEventListener("focus", pullInbox);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) pullInbox(); });
+
+// ---------- Recordatorios para el Calendario (.ics) ----------
+function exportIcs() {
+  const s = st.state();
+  const pad = (n) => String(n).padStart(2, "0");
+  const stamp = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
+  const d0 = today().replace(/-/g, "");
+  const ev = [];
+  const add = (uidk, title, rrule, desc, start = d0, hour = 9) => ev.push([
+    "BEGIN:VEVENT", `UID:cuadra-${uidk}@cuadra`, `DTSTAMP:${stamp}`, `DTSTART:${start}T${pad(hour)}0000`, `DURATION:PT15M`, `SUMMARY:${title}`,
+    rrule ? `RRULE:${rrule}` : "", desc ? `DESCRIPTION:${desc}` : "",
+    "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${title}`, "TRIGGER:-P1D", "END:VALARM",
+    "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${title}`, "TRIGGER:PT0M", "END:VALARM", "END:VEVENT"].filter(Boolean).join("\r\n"));
+  for (const a of s.accounts.filter((x) => x.type === "credit" && !x.archived && x.dueDay && Math.abs(Number(x.initial) || 0) + 1 > 0))
+    add(`pago-${a.id}`, `Pagar ${a.name}`, `FREQ=MONTHLY;BYMONTHDAY=${a.dueDay}`, "Fecha límite de pago (Cuadra)");
+  const p = st.partner();
+  if (p) {
+    const freq = s.settings.corteFreq;
+    const start = s.cortes.length ? [...s.cortes].sort((a, b) => (a.end < b.end ? 1 : -1))[0].end : s.settings.corteStart || today();
+    const first = new Date(start + "T12:00"); first.setDate(first.getDate() + (freq === "monthly" ? 30 : freq === "biweekly" ? 14 : 7) - (s.cortes.length ? 0 : 1));
+    const f = `${first.getFullYear()}${pad(first.getMonth() + 1)}${pad(first.getDate())}`;
+    add("corte", `Cerrar corte con ${p.name}`, freq === "monthly" ? "FREQ=MONTHLY" : `FREQ=WEEKLY;INTERVAL=${freq === "biweekly" ? 2 : 1}`, "Abre Cuadra → Cortes", f, 20);
+  }
+  const renta = (s.settings.fund.budget || []).find((b) => b.categoryId === "c_renta");
+  if (renta) add("renta", `Renta $${renta.amount}`, "FREQ=MONTHLY;BYMONTHDAY=1", "Tú 60% · Liz 40%");
+  for (const x of (s.subs || []).filter((x) => x.active && x.day)) add(`sub-${x.id}`, `Cobro ${x.name} $${x.amount}`, `FREQ=MONTHLY;BYMONTHDAY=${x.day}`, x.accountId ? `Tarjeta: ${st.account(x.accountId)?.name || ""}` : "");
+  for (const pp of s.people.filter((x) => x.plan && !x.archived)) {
+    const day = Number(pp.plan.start.slice(8, 10));
+    const days = pp.plan.freq === "quincenal" ? `${day},${Math.min(28, ((day + 14) % 30) + 1)}` : `${day}`;
+    add(`plan-${pp.id}`, `Pago de ${pp.name} $${pp.plan.amount}`, pp.plan.freq === "semanal" ? "FREQ=WEEKLY" : `FREQ=MONTHLY;BYMONTHDAY=${days}`, "Registra el abono en Cuadra");
+  }
+  const nextSun = new Date(); nextSun.setDate(nextSun.getDate() + ((7 - nextSun.getDay()) % 7));
+  add("cuadrar", "Cuadrar cuentas en Cuadra", "FREQ=WEEKLY;BYDAY=SU", "Compara tus saldos con el banco", `${nextSun.getFullYear()}${pad(nextSun.getMonth() + 1)}${pad(nextSun.getDate())}`, 20);
+  const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Cuadra//ES", "CALSCALE:GREGORIAN", "X-WR-CALNAME:Cuadra", ...ev, "END:VCALENDAR"].join("\r\n");
+  shareOrDownload(new Blob([ics], { type: "text/calendar" }), "cuadra-recordatorios.ics");
+}
 
 // ---------- Bienvenida ----------
 function renderWelcome() {
@@ -200,6 +285,8 @@ const actions = {
   editSub: (d) => F.subForm(st.byId("subs", d.id)),
   anMonths: (d) => { ui.anMonths = Number(d.n); render(); },
   editLimits: () => F.limitsForm(),
+  exportIcs: () => exportIcs(),
+  inboxItem: (d) => openInboxItem(d.id),
   filterCat: (d) => { ui.movFilter.cat = ui.movFilter.cat === d.id ? "" : d.id; render(); },
   movView: (d) => { ui.movView = d.v; try { localStorage.setItem("cuadra_movview", d.v); } catch {} render(); },
   anExtra: () => { ui.anExtra = ui.anExtra === false; render(); },
@@ -255,7 +342,9 @@ document.addEventListener("change", (e) => {
   if (el.dataset.filter && el.dataset.filter !== "q") { ui.movFilter[el.dataset.filter] = el.value; return render(); }
   if (el.dataset.setting) {
     const s = st.state(), k = el.dataset.setting, v = el.value;
-    if (k === "partnerPct") s.settings.partnerPct = Math.max(0, Math.min(100, parseAmount(v) || 0));
+    if (k === "nwExcludeMsi") s.settings.nwExcludeMsi = v === "1";
+    else if (k === "inboxUrl") s.settings.inboxUrl = v.trim();
+    else if (k === "partnerPct") s.settings.partnerPct = Math.max(0, Math.min(100, parseAmount(v) || 0));
     else if (k === "fundPct") s.settings.fund.myPct = Math.max(0, Math.min(100, parseAmount(v) || 0));
     else s.settings[k] = v || null;
     if (k === "name") s.settings.name = v.trim();
@@ -336,3 +425,4 @@ st.load();
 navigator.storage?.persist?.().catch(() => {});
 render();
 registerSW();
+pullInbox();

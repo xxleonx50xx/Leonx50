@@ -181,7 +181,8 @@ export function home(ui) {
   }
   const active = s.accounts.filter((a) => !a.archived);
   const assets = active.filter((a) => a.type !== "credit").reduce((x, a) => x + C.acc[a.id], 0);
-  const cardDebt = active.filter((a) => a.type === "credit").reduce((x, a) => x + Math.max(0, -C.acc[a.id]), 0);
+  const cardDebtFull = active.filter((a) => a.type === "credit").reduce((x, a) => x + Math.max(0, -C.acc[a.id]), 0);
+  const cardDebt = C.nwNoMsi ? Math.max(0, cardDebtFull - C.msiDebt) : cardDebtFull;
   const stale = active.filter((a) => !a.lastReconciled || daysBetween(a.lastReconciled, today()) > 7);
   const backupOld = s.tx.filter((t) => !t.hist).length > 5 && (!s.settings.lastBackup || daysBetween(s.settings.lastBackup, today()) > 7);
   const p = st.partner();
@@ -189,11 +190,11 @@ export function home(ui) {
   // 1. Encabezado con patrimonio
   const head = `
     <section class="nw">
-      <small>Patrimonio neto</small>
+      <small>Patrimonio neto${C.nwNoMsi ? " · sin MSI" : ""}</small>
       <div class="nw-big ${C.netWorth < 0 ? "neg" : ""}">${money(C.netWorth)}</div>
       <div class="nw-row">
         <a href="#/cuentas"><small>Tengo</small><b>${money0(assets)}</b></a><i></i>
-        <a href="#/cuentas"><small>Debo</small><b class="neg">${money0(cardDebt)}</b></a><i></i>
+        <a href="#/msi"><small>${C.nwNoMsi ? "Debo (sin MSI)" : "Debo"}</small><b class="neg">${money0(cardDebt)}</b></a><i></i>
         <a href="#/personas"><small>Me deben</small><b class="pos">${money0(C.owedToMe)}</b></a>
       </div>
     </section>`;
@@ -210,6 +211,7 @@ export function home(ui) {
     <button data-act="add" data-kind="income"><span>${icon("arrow-down-left")}</span>Ingreso</button>
   </div>`;
   let alerts = "";
+  if (s.inbox?.length) alerts += `<div class="card inbox-card"><div class="sec-h" style="margin:0 0 6px"><h3 style="font-size:17px">Compras de Apple Pay por registrar</h3></div>${s.inbox.slice(0, 5).map((it) => `<button class="row" data-act="inboxItem" data-id="${esc(it.id)}">${brandFor(it.comercio) ? logo(brandFor(it.comercio)) : iconTile("credit-card")}<div class="mid"><div class="t1">${esc(it.comercio || "Compra")}</div><div class="t2">${esc(it.tarjeta || "")} · ${esc(it.fecha || "")}</div></div><div class="end"><b class="amt">${esc(it.monto || "")}</b><small>Registrar</small></div></button>`).join("")}</div>`;
   if (backupOld) alerts += `<a class="banner warn" href="#/respaldo">${icon("triangle-alert")}<span>Haz un respaldo — ${s.settings.lastBackup ? `el último fue ${relDays(s.settings.lastBackup)}` : "aún no tienes ninguno"}</span></a>`;
   // 4. Este mes vs promedio
   const A = analysis(s, 6, brandFor);
@@ -829,6 +831,7 @@ export function settings() {
   const html = `
     <div class="card form">
       <label class="field"><span class="lbl">Apariencia</span><select data-setting="theme">${[["dark", "Oscura (recomendada)"], ["auto", "Automática (como tu iPhone)"], ["light", "Clara"]].map(([v, l]) => `<option value="${v}" ${(st2.theme || "dark") === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+      <label class="field"><span class="lbl">Patrimonio y "Debo"</span><select data-setting="nwExcludeMsi"><option value="1" ${st2.nwExcludeMsi !== false ? "selected" : ""}>Sin restar los MSI (como en tu Excel)</option><option value="0" ${st2.nwExcludeMsi === false ? "selected" : ""}>Restando toda la deuda, MSI incluidos</option></select></label>
       <label class="field"><span class="lbl">Color principal</span><select data-setting="palette">${[["jade", "Jade"], ["esmeralda", "Esmeralda"], ["salvia", "Salvia"], ["bosque", "Bosque"], ["olivo", "Olivo"]].map(([v, l]) => `<option value="${v}" ${(st2.palette || "jade") === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>
       <label class="field"><span class="lbl">Tu nombre</span><input data-setting="name" value="${esc(st2.name)}" placeholder="Fer"/></label>
       <label class="field"><span class="lbl">Tu pareja</span><select data-setting="partnerId"><option value="">— Ninguna —</option>${ppl.map((p) => `<option value="${p.id}" ${st2.partnerId === p.id ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label>
@@ -838,7 +841,16 @@ export function settings() {
         ${[["weekly", "Cada semana"], ["biweekly", "Cada 2 semanas"], ["monthly", "Cada mes"]].map(([v, l]) => `<option value="${v}" ${st2.corteFreq === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>
       ${!s.cortes.length ? `<label class="field"><span class="lbl">Inicio del primer corte</span><input type="date" data-setting="corteStart" value="${st2.corteStart || ""}"/><small class="hint">Hoy es ${DIAS_L[new Date().getDay()]}.</small></label>` : ""}
     </div>
-    <p class="fine pad">Los cambios se guardan solos.</p>`;
+    <p class="fine pad">Los cambios se guardan solos.</p>
+    ${section("Recordatorios", `<div class="card"><p class="lead" style="margin:0 0 12px">Agrega a tu Calendario del iPhone avisos para pagar tarjetas, cerrar el corte con Liz, la renta, suscripciones y los pagos de tu papá. El iPhone te notifica solo.</p>
+      ${btn("Agregar recordatorios al Calendario", `data-act="exportIcs"`, "primary full", "calendar")}</div>`)}
+    ${section("Compras con Apple Pay", `<div class="card">
+      <p class="lead" style="margin:0 0 10px">Con la app <b>Atajos</b> del iPhone, cada vez que pagas acercando el teléfono se puede mandar la compra a Cuadra.</p>
+      ${kv("Link para el Atajo", `<code class="mono">${esc(location.origin + location.pathname)}#/nuevo?monto=…&comercio=…&tarjeta=…</code>`)}
+      ${kv("Buzón (cuando la tengas en Hostinger)", st2.inboxUrl ? `<span class="pos">conectado</span>` : `<span class="muted">sin conectar</span>`)}
+      <label class="field" style="margin-top:10px"><span class="lbl">URL del buzón (opcional)</span><input data-setting="inboxUrl" value="${esc(st2.inboxUrl || "")}" placeholder="https://tudominio.com/fer/inbox.php"/></label>
+      ${kv("Clave del buzón", `<code class="mono">${esc(st2.inboxToken || "")}</code>`)}
+      <a class="btn full" href="#/applepay">${icon("info")}<span>Cómo configurar el Atajo</span></a></div>`)}`;
   return { title: "Ajustes", back: true, html };
 }
 
@@ -981,4 +993,27 @@ export function limitsView(ui) {
   if (L.unlimited > 0) html += `<p class="fine pad">Además gastaste ${money0(L.unlimited)} en categorías sin límite.</p>`;
   html += `<p class="fine pad">Cuenta tu parte de cada gasto (lo que pagó Liz por su lado no se suma) y tus mensualidades MSI. La rayita marca en qué día del mes vas.</p>`;
   return { title: "Límites", back: !ui.desk, action, html };
+}
+
+// ================= GUÍA APPLE PAY =================
+export function applePayGuide() {
+  const s = S();
+  const base = location.origin + location.pathname;
+  const html = `<div class="card guide">
+    <p class="lead">Así haces que <b>cada compra con Apple Pay</b> llegue a Cuadra (iOS 17 o más nuevo):</p>
+    <ol>
+      <li>Abre <b>Atajos</b> → pestaña <b>Automatización</b> → <b>＋</b> → <b>Transacción</b>.</li>
+      <li>Elige tus tarjetas de Wallet, marca <b>"Ejecutar inmediatamente"</b> y toca <b>Siguiente</b> → <b>Nuevo atajo en blanco</b>.</li>
+      <li>Agrega la acción <b>URL</b> y escribe:<br/><code class="mono">${esc(base)}#/nuevo?monto=</code> + variable <b>Cantidad</b> + <code class="mono">&comercio=</code> + variable <b>Comercio</b> + <code class="mono">&tarjeta=</code> + variable <b>Tarjeta</b>.</li>
+      <li>Agrega la acción <b>Abrir URL</b>.</li>
+    </ol>
+    <p class="fine">Al pagar, se abre Cuadra con el monto, el comercio y la tarjeta ya llenos: solo eliges categoría y guardas. Si el comercio ya lo usaste antes, la categoría también se llena sola.</p>
+    <p class="fine"><b>Ojo:</b> en iPhone, “Abrir URL” abre Safari, no el ícono de la pantalla de inicio, y cada uno guarda sus datos aparte. Por eso, hasta tener el buzón, usa Cuadra desde Safari (en Favoritos). Cuando la subas a Hostinger, el buzón (<code class="mono">inbox.php</code>) guarda las compras y la app las recoge sola al abrirse, sin importar desde dónde la abras.</p>
+  </div>
+  ${section("Con buzón (Hostinger)", `<div class="card guide"><ol>
+      <li>Sube el .zip a Hostinger (incluye <code class="mono">inbox.php</code>).</li>
+      <li>En Ajustes pega la URL del buzón, por ejemplo <code class="mono">https://tudominio.com/fer/inbox.php</code>.</li>
+      <li>En el Atajo, en lugar de “Abrir URL”, usa <b>Obtener contenido de URL</b> → método <b>POST</b> → JSON con <code class="mono">token</code> = <code class="mono">${esc(s.settings.inboxToken || "")}</code>, <code class="mono">monto</code>, <code class="mono">comercio</code> y <code class="mono">tarjeta</code>.</li>
+    </ol><p class="fine">Así no se abre nada al pagar: la próxima vez que entres a Cuadra verás “Compras de Apple Pay por registrar”.</p></div>`)}`;
+  return { title: "Apple Pay", back: true, html };
 }
