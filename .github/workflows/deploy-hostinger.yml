@@ -1,0 +1,58 @@
+name: Deploy Cuadra to Hostinger (FTP)
+
+# Sube cuadra/ a Hostinger en la carpeta /fer (https://<dominio>/fer/).
+# Necesita estos "Repository secrets" (Settings → Secrets and variables → Actions):
+#   HOSTINGER_FTP_SERVER    ej. ftp.lightslategrey-giraffe-714715.hostingersite.com (o la IP de hPanel → FTP)
+#   HOSTINGER_FTP_USERNAME  ej. u123456789 (o el usuario FTP que crees para esto)
+#   HOSTINGER_FTP_PASSWORD  la contraseña de esa cuenta FTP
+# Opcional:
+#   HOSTINGER_FTP_DIR       carpeta destino; por defecto public_html/fer/
+
+on:
+  push:
+    branches: [main, master, claude/fastest-speed-tracker-app-im0u4f]
+    paths: ["cuadra/**", ".github/workflows/deploy-hostinger.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: hostinger
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ¿Hay acceso configurado?
+        id: check
+        env:
+          SERVER: ${{ secrets.HOSTINGER_FTP_SERVER }}
+        run: |
+          if [ -z "$SERVER" ]; then
+            echo "Faltan los secretos de Hostinger; no se sube nada." >> "$GITHUB_STEP_SUMMARY"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.ok == 'true'
+
+      - name: Preparar archivos
+        if: steps.check.outputs.ok == 'true'
+        run: |
+          mkdir -p _hostinger
+          cp -r cuadra/. _hostinger/
+          rm -f _hostinger/icons/gen-icons.mjs _hostinger/README.md
+          rm -rf _hostinger/inbox-data
+
+      - name: Subir por FTP
+        if: steps.check.outputs.ok == 'true'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.HOSTINGER_FTP_SERVER }}
+          username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
+          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          local-dir: ./_hostinger/
+          server-dir: ${{ secrets.HOSTINGER_FTP_DIR || 'public_html/fer/' }}
+          exclude: |
+            **/inbox-data/**
