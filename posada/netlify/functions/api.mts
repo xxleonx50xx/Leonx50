@@ -41,7 +41,8 @@ async function byToken(token: string | null) {
   const h = await sha(token);
   return (await all()).find((p) => p.tokenHash === h) ?? null;
 }
-const publicP = (p: any) => ({ id: p.id, name: p.name, gifts: p.gifts });
+const publicP = (p: any) => ({ id: p.id, name: p.name, gifts: p.gifts, avatar: p.avatar ?? 0 });
+const cleanAvatar = (v: unknown) => { const n = Number(v); return Number.isInteger(n) && n >= 0 && n < 6 ? n : 0; };
 function isAdmin(pin: unknown) {
   const real = Netlify.env.get("ADMIN_PIN");
   return !!real && String(pin ?? "") === real;
@@ -83,7 +84,7 @@ export default async (req: Request, context: Context) => {
       return json({
         participants: ps.map(publicP),
         drawn: !!draw, drawnAt: draw?.drawnAt ?? null,
-        me: me ? { id: me.id, name: me.name, email: me.email, gifts: me.gifts } : null,
+        me: me ? { id: me.id, name: me.name, email: me.email, gifts: me.gifts, avatar: me.avatar ?? 0 } : null,
         mine,
       });
     }
@@ -98,7 +99,7 @@ export default async (req: Request, context: Context) => {
         return bad("Ya hay alguien con ese nombre. Agrega tu apellido o apodo.");
       const id = rand(6), tok = rand(18);
       const p = {
-        id, name, email: clean(body.email, 120), gifts: cleanGifts(body.gifts),
+        id, name, email: clean(body.email, 120), gifts: cleanGifts(body.gifts), avatar: cleanAvatar(body.avatar),
         tokenHash: await sha(tok), createdAt: Date.now(),
       };
       await s.setJSON("p/" + id, p);
@@ -115,6 +116,7 @@ export default async (req: Request, context: Context) => {
       }
       if (body.email !== undefined) me.email = clean(body.email, 120);
       if (body.gifts !== undefined) me.gifts = cleanGifts(body.gifts);
+      if (body.avatar !== undefined) me.avatar = cleanAvatar(body.avatar);
       await s.setJSON("p/" + me.id, me);
       return json({ ok: true });
     }

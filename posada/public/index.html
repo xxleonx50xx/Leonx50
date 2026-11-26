@@ -5,117 +5,188 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Intercambio de la Posada</title>
 <meta name="description" content="Apúntate, sube tu lista de deseos y descubre en secreto a quién le regalas.">
-<meta name="theme-color" content="#a50f1c">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎁</text></svg>">
+<meta name="theme-color" content="#9e0d1a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='14' y='38' width='72' height='54' rx='6' fill='%23c8142a'/><rect x='8' y='26' width='84' height='18' rx='5' fill='%23e8b64a'/><rect x='44' y='26' width='12' height='66' fill='%23e8b64a'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Figtree:wght@400;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Caveat:wght@600;700&family=Figtree:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-/* VOICE occasion: posada de amigos, festiva pero elegante (vestidos rojos, trajes negros)
-   IDEA una ruleta de feria navideña bajo papel picado
-   PICTURE la ruleta grande con los nombres reales de quienes ya se apuntaron
-   COLOUR rojo posada #a50f1c, negro, oro #e8b64a, blanco
-   TYPE Archivo Black + Figtree
-   LAYOUT laptop: título y acciones a la izquierda, ruleta a la derecha; teléfono: título, ruleta, acciones */
-:root{--red:#a50f1c;--red2:#7d0a14;--gold:#e8b64a;--ink:#16110f;--bg:#fff;--card:#fff;--line:#e7dcd8;--soft:#f7efed;--muted:#6b5b57;color-scheme:light}
-@media (prefers-color-scheme:dark){:root{--ink:#f6eeea;--bg:#140d0c;--card:#1e1514;--line:#3a2a28;--soft:#241a19;--muted:#b9a7a2;color-scheme:dark}}
+/* VOICE occasion: posada de amigos, de gala (vestidos rojos de satín, trajes negros)
+   IDEA una noche de posada dibujada a mano: papel picado, foquitos y la ruleta de feria
+   PICTURE los seis amigos de la foto como garabatos + la ruleta con sus caritas
+   COLOUR rojo vino #9e0d1a, negro tinta #1a1110, oro #e8b64a, crema de papel #fff8f1
+   TYPE Archivo Black + Figtree, notas a mano en Caveat
+   LAYOUT laptop: título, garabatos y cifras a la izquierda, ruleta a la derecha; teléfono: título, ruleta, garabatos */
+:root{--red:#9e0d1a;--red2:#7a0913;--hot:#d8263a;--gold:#e8b64a;--ink:#1a1110;--bg:#fff8f1;--card:#fff;--line:#ecdcd3;--soft:#f8ece4;--muted:#6e5a52;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--ink:#f7ece6;--bg:#150c0b;--card:#201413;--line:#3b2725;--soft:#2a1b19;--muted:#bba49c;color-scheme:dark}}
+:root[data-theme=dark]{--ink:#f7ece6;--bg:#150c0b;--card:#201413;--line:#3b2725;--soft:#2a1b19;--muted:#bba49c;color-scheme:dark}
 *{box-sizing:border-box;min-width:0}
 html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font:16px/1.5 Figtree,system-ui,sans-serif;overflow-x:clip}
-.wrap{max-width:1100px;margin:0 auto;padding-left:max(5vw,16px,env(safe-area-inset-left,0px));padding-right:max(5vw,16px,env(safe-area-inset-right,0px))}
-h1,h2,h3{font-family:"Archivo Black",Impact,sans-serif;font-weight:400;letter-spacing:-.01em;line-height:1.05;margin:0}
-h2{font-size:clamp(24px,4vw,32px);margin-bottom:14px}
-.hero{background:var(--red);color:#fff;position:relative;margin-top:calc(-1*env(safe-area-inset-top,0px));padding-top:calc(env(safe-area-inset-top,0px) + 70px);padding-bottom:40px;overflow:hidden}
-.flags{position:absolute;top:env(safe-area-inset-top,0px);left:0;right:0;height:64px}
-.hero .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px;align-items:center}
-.hero h1{font-size:clamp(38px,7vw,64px)}
-.hero p{font-size:18px;max-width:30em;opacity:.92;margin:14px 0 22px}
-.stat{display:flex;gap:22px;flex-wrap:wrap}
-.stat b{display:block;font:400 34px "Archivo Black",sans-serif;color:var(--gold)}
-.stat span{font-size:14px;opacity:.85}
-.wheelbox{position:relative;aspect-ratio:1;width:100%;max-width:440px;justify-self:center}
-.wheelbox svg{width:100%;height:100%;display:block}
+.wrap{max-width:1160px;margin:0 auto;padding-left:max(5vw,16px,env(safe-area-inset-left,0px));padding-right:max(5vw,16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:"Archivo Black",Impact,sans-serif;font-weight:400;letter-spacing:-.015em;line-height:1.04;margin:0}
+h2{font-size:clamp(26px,4vw,36px);margin-bottom:6px}
+.sub{color:var(--muted);margin:0 0 18px}
+.hand{font-family:Caveat,cursive;font-weight:700}
+
+/* ---------- portada ---------- */
+.hero{position:relative;color:#fff;overflow:hidden;margin-top:calc(-1*env(safe-area-inset-top,0px));padding-top:calc(env(safe-area-inset-top,0px) + 86px);padding-bottom:0;
+  background:radial-gradient(ellipse 60% 70% at 78% 45%,#c3162a 0%,transparent 70%),radial-gradient(ellipse 50% 60% at 10% 100%,#6d0710 0%,transparent 70%),var(--red)}
+.flags{position:absolute;top:env(safe-area-inset-top,0px);left:0;width:100%;height:84px}
+.hero .wrap{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:24px 40px;align-items:center}
+.hero h1{font-size:clamp(40px,6.4vw,74px);text-wrap:balance}
+.hero .lead{font-size:18px;max-width:30em;opacity:.93;margin:14px 0 0}
+.crew{position:relative;margin-top:34px}
+.crew svg{display:block;width:100%;height:auto}
+.note{position:absolute;right:4%;top:-34px;font-size:clamp(20px,2.4vw,26px);color:var(--gold);transform:rotate(-6deg);white-space:nowrap}
+.floor{height:26px;background:repeating-linear-gradient(90deg,#c9b8a6 0 90px,#bba894 90px 92px,#d2c2b1 92px 180px,#bba894 180px 182px);border-top:3px solid var(--ink);margin-top:-6px;position:relative}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.stat{background:rgba(0,0,0,.22);border:1.5px solid rgba(255,255,255,.18);border-radius:14px;padding:8px 14px}
+.stat b{display:block;font:400 26px/1.1 "Archivo Black",sans-serif;color:var(--gold)}
+.stat span{font-size:13px;opacity:.88}
+.wheelcol{display:grid;justify-items:center;gap:8px;padding-bottom:28px}
+.wheelbox{position:relative;aspect-ratio:1;width:100%;max-width:470px}
+#wheelSvg{width:100%;height:100%;display:block;overflow:visible}
 #wheelSvg{transform-origin:50% 50%;will-change:transform}
-.spinning #wheelSvg{transition:transform 5.2s cubic-bezier(.12,.67,.12,1)}
-.hub{position:absolute;left:50%;top:50%;width:17%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:#16110f;border:4px solid var(--gold);display:grid;place-items:center;font-size:clamp(18px,4vw,26px)}
-.pointer{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:16px solid transparent;border-right:16px solid transparent;border-top:30px solid var(--gold);filter:drop-shadow(0 2px 0 rgba(0,0,0,.35));z-index:2}
-main{padding-block:36px 60px}
-section{margin-bottom:44px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px}
-label{display:block;font-weight:600;font-size:15px;margin:0 0 6px}
-input{width:100%;font:16px Figtree,sans-serif;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
-input:focus{outline:none;border-color:var(--red)}
-.row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
-.field{margin-bottom:14px}
+.spinning #wheelSvg{transition:transform 5.4s cubic-bezier(.12,.67,.12,1)}
+.pointer{position:absolute;top:-16px;left:50%;transform:translateX(-50%);width:46px;height:56px;z-index:2;filter:drop-shadow(0 3px 0 rgba(0,0,0,.3))}
+.hub{position:absolute;left:50%;top:50%;width:19%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:var(--ink);border:4px solid var(--gold);display:grid;place-items:center;box-shadow:0 0 0 6px rgba(0,0,0,.18)}
+.hub svg{width:62%}
+.wheelcap{font-size:22px;color:#ffe3b0;transform:rotate(-2deg)}
+.bulb{animation:tw 1.6s ease-in-out infinite}
+.bulb:nth-child(2n){animation-delay:.8s}
+@keyframes tw{50%{opacity:.35}}
+
+/* ---------- contenido ---------- */
+main{padding-block:48px 70px}
+section{margin-bottom:56px}
+.card{background:var(--card);border:1.5px solid var(--line);border-radius:20px;padding:22px}
+label,.lbl{display:block;font-weight:800;font-size:15px;margin:0 0 6px}
+input{width:100%;font:16px Figtree,sans-serif;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink)}
+input:focus{outline:none;border-color:var(--hot);box-shadow:0 0 0 3px color-mix(in srgb,var(--hot) 22%,transparent)}
+.row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.field{margin-bottom:16px}
 .hint{font-size:14px;color:var(--muted);margin-top:4px}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 22px;border-radius:999px;border:0;font:800 16px Figtree,sans-serif;cursor:pointer;background:var(--red);color:#fff;text-decoration:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:50px;padding:0 24px;border-radius:999px;border:2.5px solid var(--ink);font:800 16px Figtree,sans-serif;cursor:pointer;background:var(--red);color:#fff;text-decoration:none;box-shadow:0 4px 0 var(--ink);transition:transform .08s,box-shadow .08s}
 .btn:hover{background:var(--red2)}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
 .btn:disabled{opacity:.5;cursor:default}
 .btn.gold{background:var(--gold);color:#2a1a00}
-.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
-.btn.small{min-height:38px;padding:0 14px;font-size:14px}
-.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
-.gift{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1.5fr) minmax(0,.7fr) 40px;gap:8px;margin-bottom:8px;align-items:center}
-.x{width:40px;height:44px;border:0;background:var(--soft);border-radius:10px;font-size:20px;cursor:pointer;color:var(--muted)}
-.people{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
-.person h3{font-size:20px;margin-bottom:8px;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
-.person h3 small{font:600 13px Figtree,sans-serif;color:var(--muted)}
-.person ul,.wish ul{list-style:none;margin:0;padding:0}
-.person li,.wish li{padding:8px 0;border-top:1px solid var(--line);font-size:15px}
-.person li:first-child,.wish li:first-child{border-top:0}
+.btn.ghost{background:var(--card);color:var(--ink);box-shadow:0 3px 0 var(--ink)}
+.btn.small{min-height:38px;padding:0 14px;font-size:14px;border-width:2px}
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px;align-items:center}
+
+/* elige tu garabato */
+.pick{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:18px}
+.pick label{margin:0;cursor:pointer;text-align:center;font:600 13px Figtree,sans-serif;color:var(--muted)}
+.pick input{position:absolute;opacity:0;width:1px;height:1px}
+.pick .av{display:block;width:100%;aspect-ratio:1;border-radius:50%;border:2.5px solid var(--line);background:var(--soft);margin-bottom:4px;transition:transform .12s}
+.pick input:checked+.av{border-color:var(--hot);background:#ffe3e0;transform:scale(1.06);box-shadow:0 0 0 4px color-mix(in srgb,var(--hot) 25%,transparent)}
+.pick input:focus-visible+.av{outline:3px solid var(--gold)}
+.av svg{width:100%;height:100%;display:block;border-radius:50%}
+
+/* regalos (formulario) */
+.gift{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1.5fr) minmax(0,.7fr) 44px;gap:8px;margin-bottom:8px;align-items:center}
+.x{width:44px;height:46px;border:0;background:var(--soft);border-radius:12px;font-size:22px;cursor:pointer;color:var(--muted)}
+
+/* listas */
+.people{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:18px}
+.person{position:relative;padding-top:18px}
+.phead{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.phead .av{width:62px;height:62px;flex:none;border-radius:50%;border:2.5px solid var(--ink);background:#ffe3e0}
+.phead h3{font-size:21px;overflow-wrap:anywhere}
+.phead small{display:block;font:600 13px Figtree,sans-serif;color:var(--muted)}
+.tags{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.tag{position:relative;display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:start;background:var(--soft);border-radius:6px 14px 14px 6px;padding:10px 12px 10px 10px;font-size:15px}
+.tag svg{width:28px;height:28px}
 .price{color:var(--muted);white-space:nowrap}
-a.buy{color:var(--red);font-weight:700;overflow-wrap:anywhere}
-@media (prefers-color-scheme:dark){a.buy{color:#ff7b86}}
+a.buy{color:var(--hot);font-weight:800;overflow-wrap:anywhere;text-decoration-thickness:2px;text-underline-offset:3px}
 .empty{color:var(--muted);font-size:15px}
-.reveal{background:var(--ink);color:var(--bg);border-radius:20px;padding:26px;text-align:left}
+.emptyhand{font-size:24px;color:var(--muted)}
+
+/* revelación */
+.reveal{position:relative;overflow:hidden;background:var(--ink);color:#fff;border-radius:24px;padding:28px;display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:24px;align-items:end}
+:root[data-theme=dark] .reveal{background:#2a1a18}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .reveal{background:#2a1a18}}
 .reveal h2{color:var(--gold)}
-.big{font:400 clamp(40px,9vw,72px)/1 "Archivo Black",sans-serif;color:#fff;margin:6px 0 14px;overflow-wrap:anywhere}
-@media (prefers-color-scheme:dark){.big{color:var(--ink)}.reveal{background:#2a1c1a;color:var(--ink)}}
-.wish{background:var(--card);color:var(--ink);border-radius:14px;padding:16px;margin-top:10px}
-.link{display:flex;gap:8px;align-items:center;background:var(--soft);border-radius:10px;padding:10px 12px;font-size:14px;overflow-wrap:anywhere}
+.reveal .hand{font-size:24px;color:#ffd7a8}
+.big{font:400 clamp(44px,9vw,80px)/1 "Archivo Black",sans-serif;margin:8px 0 16px;overflow-wrap:anywhere}
+.reveal .fig svg{width:100%;height:auto;display:block}
+.wish{background:var(--card);color:var(--ink);border-radius:16px;padding:16px}
+.confetti{position:absolute;top:-12px;width:9px;height:14px;border-radius:2px;animation:fall 2.8s ease-in forwards;pointer-events:none}
+@keyframes fall{to{transform:translateY(560px) rotate(540deg);opacity:0}}
+
+.me{display:grid;grid-template-columns:120px minmax(0,1fr);gap:22px;align-items:start}
+.me .av{width:120px;height:120px;border-radius:50%;border:3px solid var(--ink);background:#ffe3e0}
+.link{display:flex;gap:8px;align-items:center;background:var(--soft);border:1.5px dashed var(--line);border-radius:12px;padding:10px 12px;font-size:14px;overflow-wrap:anywhere}
 .link code{flex:1;font-size:13px}
-.msg{min-height:22px;font-weight:600;margin-top:10px}
+.msg{min-height:22px;font-weight:700;margin-top:10px}
 .msg.err{color:#d11a2a}
 .msg.ok{color:#1b8a4b}
 details.org summary{cursor:pointer;font-weight:800;color:var(--muted);padding:10px 0}
 .orgrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
-footer{color:var(--muted);font-size:14px;padding-bottom:40px}
-@media (max-width:760px){
-  .hero .wrap{grid-template-columns:minmax(0,1fr)}
-  .wheelbox{max-width:330px;order:2}
-  .hero{padding-top:calc(env(safe-area-inset-top,0px) + 58px);padding-bottom:28px}
-  .hero .wrap{gap:18px}
-  .hero p{font-size:16px;margin:10px 0 14px}
-  .stat{gap:18px}
-  .stat b{font-size:24px}
-  .stat span{font-size:13px}
-  .hero .txt{order:1}
+.orgrow span{display:flex;align-items:center;gap:10px}
+.orgrow .av{width:36px;height:36px;border-radius:50%;background:#ffe3e0;border:2px solid var(--ink)}
+footer{color:var(--muted);font-size:14px;padding-bottom:50px}
+
+@media (max-width:820px){
+  .hero{padding-top:calc(env(safe-area-inset-top,0px) + 70px)}
+  .hero .wrap{grid-template-columns:minmax(0,1fr);gap:10px}
+  .hero .lead{font-size:16px;margin-top:10px}
+  .wheelcol{order:2;padding-bottom:6px}
+  .wheelbox{max-width:350px}
+  .txt{display:contents}
+  .txt .head{order:1}
+  .crew{order:3}
+  .stats{order:4;margin:6px 0 18px}
+  .flags{height:64px}
+}
+@media (max-width:640px){
   .row2{grid-template-columns:minmax(0,1fr)}
-  .gift{grid-template-columns:minmax(0,1fr) 40px;background:var(--soft);padding:10px;border-radius:12px}
+  .pick{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .gift{grid-template-columns:minmax(0,1fr) 44px;background:var(--soft);padding:10px;border-radius:14px}
   .gift input:nth-child(2),.gift input:nth-child(3){grid-column:1}
   .gift .x{grid-row:1;grid-column:2}
+  .reveal{grid-template-columns:minmax(0,1fr);padding:22px}
+  .reveal .fig{order:-1;width:150px;justify-self:center}
+  .me{grid-template-columns:minmax(0,1fr)}
+  .me .av{width:96px;height:96px}
 }
-@media (prefers-reduced-motion:reduce){.spinning #wheel{transition-duration:.01s}}
+@media (prefers-reduced-motion:reduce){.spinning #wheelSvg{transition-duration:.01s}.bulb,.confetti{animation:none}}
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs id="figdefs">
+  <filter id="rough"><feTurbulence type="fractalNoise" baseFrequency=".035" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="2.4"/></filter>
+</defs></svg>
+
 <header class="hero">
-  <svg class="flags" viewBox="0 0 1200 64" preserveAspectRatio="none" aria-hidden="true" id="flags"></svg>
+  <svg class="flags" viewBox="0 0 1200 84" preserveAspectRatio="none" aria-hidden="true" id="flags"></svg>
   <div class="wrap">
     <div class="txt">
-      <h1>Intercambio de la Posada</h1>
-      <p id="lead">Apúntate, sube tu lista de deseos con el link de dónde comprar, y el día de la posada giramos la ruleta. A cada quien le sale su persona en secreto.</p>
-      <div class="stat">
-        <div><b id="nCount">0</b><span>apuntados</span></div>
-        <div><b id="nGifts">0</b><span>regalos en listas</span></div>
-        <div><b id="nState">Abierto</b><span>estado</span></div>
+      <div class="head">
+        <h1>Intercambio de la Posada</h1>
+        <p class="lead">Apúntate, elige tu garabato y sube tu lista de deseos con el link de dónde comprar. El día de la posada giramos la ruleta y a cada quien le sale su persona en secreto.</p>
+      </div>
+      <div class="crew">
+        <span class="note hand">los del intercambio ↓</span>
+        <svg id="crew" viewBox="-10 -10 640 340" role="img" aria-label="Dibujo de los seis amigos: tres con vestidos rojos y tres con traje negro"></svg>
+      </div>
+      <div class="stats">
+        <div class="stat"><b id="nCount">0</b><span>apuntados</span></div>
+        <div class="stat"><b id="nGifts">0</b><span>regalos en listas</span></div>
+        <div class="stat"><b id="nState">Abierto</b><span>sorteo</span></div>
       </div>
     </div>
-    <div class="wheelbox" id="wheelbox">
-      <div class="pointer"></div>
-      <svg id="wheelSvg" viewBox="-210 -210 420 420" aria-label="Ruleta con los nombres de los participantes"><g id="wheel"></g></svg>
-      <div class="hub" aria-hidden="true">🎁</div>
+    <div class="wheelcol">
+      <div class="wheelbox" id="wheelbox">
+        <svg class="pointer" viewBox="0 0 44 54" aria-hidden="true"><path d="M4 6 Q22 -2 40 6 L24 50 Q22 54 20 50 Z" fill="#e8b64a" stroke="#1a1110" stroke-width="3" stroke-linejoin="round"/><circle cx="22" cy="14" r="5" fill="#1a1110"/></svg>
+        <svg id="wheelSvg" viewBox="-215 -215 430 430" aria-label="Ruleta con los participantes"><g id="wheel"></g></svg>
+        <div class="hub" aria-hidden="true"><svg viewBox="0 0 40 40"><rect x="6" y="16" width="28" height="20" rx="3" fill="#c8142a" stroke="#e8b64a" stroke-width="2"/><rect x="3" y="11" width="34" height="8" rx="2" fill="#e8b64a"/><rect x="17" y="11" width="6" height="25" fill="#e8b64a"/><path d="M20 11 C14 2 6 6 12 11 M20 11 C26 2 34 6 28 11" fill="none" stroke="#e8b64a" stroke-width="2.4" stroke-linecap="round"/></svg></div>
+      </div>
+      <div class="wheelcap hand" id="wheelcap">¡a ver a quién le toca!</div>
     </div>
   </div>
+  <div class="floor" aria-hidden="true"></div>
 </header>
 
 <main class="wrap">
@@ -123,6 +194,7 @@ footer{color:var(--muted);font-size:14px;padding-bottom:40px}
   <section id="meSec"></section>
   <section>
     <h2>Las listas de deseos</h2>
+    <p class="sub">Así ya sabes qué regalar cuando te toque.</p>
     <div class="people" id="people"></div>
   </section>
   <section>
@@ -131,7 +203,7 @@ footer{color:var(--muted);font-size:14px;padding-bottom:40px}
       <div class="card" id="orgCard"></div>
     </details>
   </section>
-  <footer>Tus datos solo se usan para este intercambio. El sorteo lo hace el servidor; ni el organizador ve las parejas.</footer>
+  <footer>El sorteo lo hace el servidor: nadie, ni el organizador, ve las parejas. Cada quien ve solo la suya.</footer>
 </main>
 
 <script>
@@ -139,56 +211,177 @@ footer{color:var(--muted);font-size:14px;padding-bottom:40px}
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const safeUrl = u => /^https?:\/\//i.test(u || "") ? u : "";
-const COLORS = ["#a50f1c","#16110f","#e8b64a","#d8343f","#2b201d","#f3d27e"];
 const ls = {get(k){try{return localStorage.getItem(k)}catch{return null}},set(k,v){try{localStorage.setItem(k,v)}catch{}},del(k){try{localStorage.removeItem(k)}catch{}}};
 
+/* ================= los garabatos ================= */
+const INK = "#1a1110";
+const SK = ["#f1c29f","#e9b48c","#e2a982","#eab996","#d9a07c","#e6b08a"];
+const NAMES = ["Satín","Abertura","Princesa","Lentes","Moño","Corbata"];
+const st = `stroke="${INK}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"`;
+const arm = (d, c, w=9) => `<path d="${d}" fill="none" stroke="${INK}" stroke-width="${w+5}" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round"/>`;
+function face(skin, o={}){
+  const eyes = o.down
+    ? `<path d="M50 47 q3 3 6 0 M64 47 q3 3 6 0" fill="none" ${st} stroke-width="2"/>`
+    : `<circle cx="53" cy="46" r="2.3" fill="${INK}"/><circle cx="67" cy="46" r="2.3" fill="${INK}"/>`;
+  const mouth = o.oh ? `<ellipse cx="60" cy="55" rx="3.4" ry="4.2" fill="#5a1a1a" ${st} stroke-width="2"/>`
+    : o.lips ? `<path d="M53 53 Q60 59 67 53 Q60 56 53 53Z" fill="#c0182a" stroke="#8c0f1e" stroke-width="1.6"/>`
+    : `<path d="M54 53 Q60 58 66 53" fill="none" ${st} stroke-width="2.2"/>`;
+  return `<rect x="54" y="56" width="12" height="20" fill="${skin}" ${st}/>
+    <ellipse cx="45" cy="47" rx="3.5" ry="5" fill="${skin}" ${st} stroke-width="2"/><ellipse cx="75" cy="47" rx="3.5" ry="5" fill="${skin}" ${st} stroke-width="2"/>
+    <ellipse cx="60" cy="44" rx="15" ry="18" fill="${skin}" ${st}/>${eyes}${mouth}
+    <ellipse cx="50" cy="52" rx="3.2" ry="2" fill="#e8848a" opacity=".55"/><ellipse cx="70" cy="52" rx="3.2" ry="2" fill="#e8848a" opacity=".55"/>`;
+}
+const glasses = `<g fill="rgba(255,255,255,.25)" ${st} stroke-width="2.2"><rect x="46" y="40" width="12" height="10" rx="3.5"/><rect x="62" y="40" width="12" height="10" rx="3.5"/><path d="M58 44 h4 M46 43 l-3 -1 M74 43 l3 -1" fill="none"/></g>`;
+function lady(i){
+  const s = SK[i];
+  if (i === 0){ // satín, cabello largo ondulado, cola
+    return `<path d="M43 38 C38 16 82 16 77 38 C84 58 84 86 94 112 C82 120 72 104 74 86 L46 86 C48 104 38 120 26 112 C36 86 36 58 43 38Z" fill="#8b5a32" ${st}/>
+      ${arm("M37 90 C30 116 30 142 33 170", s)}${arm("M83 90 C90 116 90 142 87 170", s)}
+      ${face(s,{lips:1})}<circle cx="45" cy="55" r="2.4" fill="#e8b64a"/><circle cx="75" cy="55" r="2.4" fill="#e8b64a"/>
+      <path d="M44 40 C46 22 76 20 77 40 C70 30 58 26 44 40Z" fill="#8b5a32" ${st}/>
+      <path d="M36 82 Q60 74 84 82 L84 92 L36 92Z" fill="${s}" ${st}/>
+      <path d="M33 90 Q60 98 87 90 L80 122 Q74 136 77 152 Q82 204 72 244 Q84 282 94 308 L30 308 Q16 302 2 308 Q22 292 40 282 Q48 262 48 244 Q38 204 43 152 Q46 136 40 122Z" fill="#c8142a" ${st}/>
+      <path d="M52 110 Q56 170 54 240 M68 130 Q72 200 76 270 M30 300 Q42 290 46 276" fill="none" stroke="#ff5466" stroke-width="3" stroke-linecap="round" opacity=".7"/>
+      ${[...Array(9)].map((_,k)=>`<circle cx="${38+k*5.5}" cy="${92+Math.sin(k)*1.5}" r="1.6" fill="#f2eeee"/>`).join("")}
+      <path d="M36 300 l-4 8 h10 Z" fill="#d9d4d4" ${st} stroke-width="1.6"/>`;
+  }
+  if (i === 1){ // abertura en la pierna, media cola
+    return `<path d="M43 36 C38 16 82 16 77 36 C80 58 80 82 84 100 L70 96 L50 96 L36 100 C40 82 40 58 43 36Z" fill="#2b1a14" ${st}/>
+      ${arm("M37 90 C31 116 31 140 34 166", s)}${arm("M83 90 C88 114 86 140 82 160", s)}
+      ${face(s)}<path d="M44 40 C44 22 76 20 77 38 C70 26 56 26 44 40Z" fill="#2b1a14" ${st}/>
+      <path d="M56 27 Q60 19 66 26" fill="none" stroke="#5b3a2c" stroke-width="2"/>
+      <path d="M36 82 Q60 74 84 82 L84 92 L36 92Z" fill="${s}" ${st}/>
+      <path d="M62 200 L74 200 L76 296 L64 296Z" fill="${s}" ${st}/>
+      <path d="M62 296 h16 M64 286 l12 -4 M64 292 l12 0" stroke="#d9d4d4" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+      <path d="M35 90 Q60 98 85 90 L79 124 Q76 140 79 156 L84 308 L76 308 L72 214 Q68 202 62 212 L58 308 L38 308 Q42 232 42 156 Q44 140 41 124Z" fill="#c8142a" ${st}/>
+      <path d="M50 120 Q54 200 50 300 M70 120 Q74 160 72 196" fill="none" stroke="#ff5466" stroke-width="3" stroke-linecap="round" opacity=".7"/>`;
+  }
+  // princesa: chongo, vestido de bola brillante, mirando abajo
+  let g = "", seed = 11;
+  const r = () => (seed = seed * 16807 % 2147483647) / 2147483647;
+  for (let k = 0; k < 70; k++){ const y = 140 + r()*160, half = 14 + (y-140)/160*52, x = 60 + (r()*2-1)*half; g += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(0.8+r()*1.4).toFixed(1)}" fill="${r()>.5?"#ff8a96":"#ffd3d8"}"/>`; }
+  return `<circle cx="60" cy="22" r="10" fill="#2b1a14" ${st}/>
+    ${arm("M37 90 C32 112 34 140 42 164", s)}${arm("M83 90 C88 112 86 140 78 164", s)}
+    ${face(s,{down:1})}<path d="M44 42 C42 22 78 20 76 42 C72 30 60 28 52 32 Q48 36 44 42Z" fill="#2b1a14" ${st}/>
+    <path d="M38 84 Q60 76 82 84 L82 92 L38 92Z" fill="${s}" ${st}/>
+    <path d="M46 138 L74 138 Q100 200 118 302 Q60 318 2 302 Q20 200 46 138Z" fill="#b30f1f" ${st}/>
+    <path d="M54 150 Q46 230 30 304 M66 150 Q76 230 92 306 M60 150 L60 312" fill="none" stroke="#7d0913" stroke-width="2.4" opacity=".6"/>${g}
+    <path d="M40 92 Q50 84 60 92 Q70 84 80 92 L75 140 L45 140Z" fill="#c8142a" ${st}/>
+    ${[...Array(10)].map((_,k)=>`<circle cx="${47+(k%5)*6.5}" cy="${104+Math.floor(k/5)*14+(k%2)*5}" r="1.3" fill="#ffd3d8"/>`).join("")}
+    <circle cx="42" cy="166" r="5.5" fill="${s}" ${st} stroke-width="2"/><circle cx="78" cy="166" r="5.5" fill="${s}" ${st} stroke-width="2"/>`;
+}
+function guy(i){
+  const s = SK[i];
+  const shirt = i === 5 ? "#fbfbfb" : "#141010";
+  const hair = i === 4
+    ? `<path d="M44 40 C40 16 74 10 78 34 C74 28 66 26 58 28 C52 30 47 34 44 40Z" fill="#1d1412" ${st}/>`
+    : `<path d="M44 40 C42 22 78 20 77 40 C72 30 62 27 54 29 C49 31 46 35 44 40Z" fill="#1d1412" ${st}/>`;
+  const neck = i === 4
+    ? `<path d="M51 82 L60 86 L51 90Z M69 82 L60 86 L69 90Z" fill="#050404" stroke="#000" stroke-width="1.5"/><circle cx="60" cy="86" r="2.3" fill="#050404"/>`
+    : `<path d="M57 82 L63 82 L65 118 L60 126 L55 118Z" fill="#050404" stroke="${i===5?INK:"#3a2f2f"}" stroke-width="1.6"/>`;
+  return `<path d="M43 196 L58 196 L57 298 L42 298Z" fill="#161212" ${st}/><path d="M62 196 L77 196 L78 298 L63 298Z" fill="#161212" ${st}/>
+    <path d="M37 296 h21 q7 0 9 9 h-31 Z" fill="#0b0909" ${st} stroke-width="2"/><path d="M62 296 h21 q7 0 9 9 h-31 Z" fill="#0b0909" ${st} stroke-width="2"/>
+    <path d="M44 300 h8 M69 300 h8" stroke="#fff" stroke-width="1.6" opacity=".6"/>
+    ${face(s,{oh:i===4})}${hair}${i!==5?glasses:""}
+    <path d="M32 86 Q60 76 88 86 Q93 142 87 206 L33 206 Q27 142 32 86Z" fill="#1b1616" ${st}/>
+    <path d="M51 80 L69 80 L60 132Z" fill="${shirt}" stroke="${INK}" stroke-width="1.6"/>${neck}
+    <path d="M51 80 L60 132 L46 106 L50 92Z" fill="#2b2323" stroke="#000" stroke-width="1.6"/><path d="M69 80 L60 132 L74 106 L70 92Z" fill="#2b2323" stroke="#000" stroke-width="1.6"/>
+    ${i!==5?`<path d="M71 112 L82 110 L79 118 L73 118Z" fill="#d8263a" stroke="#000" stroke-width="1.2"/>`:""}
+    <circle cx="60" cy="152" r="2.2" fill="#3a3030"/><circle cx="60" cy="172" r="2.2" fill="#3a3030"/>
+    <path d="M36 92 C28 120 28 160 32 192" fill="none" stroke="#000" stroke-width="16" stroke-linecap="round"/><path d="M36 92 C28 120 28 160 32 192" fill="none" stroke="#1b1616" stroke-width="12" stroke-linecap="round"/>
+    <path d="M84 92 C92 120 92 160 88 192" fill="none" stroke="#000" stroke-width="16" stroke-linecap="round"/><path d="M84 92 C92 120 92 160 88 192" fill="none" stroke="#1b1616" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="32" cy="198" r="6" fill="${s}" ${st} stroke-width="2"/><circle cx="88" cy="198" r="6" fill="${s}" ${st} stroke-width="2"/>`;
+}
+const figDefs = [0,1,2,3,4,5].map(i => `<g id="fig${i}">${i < 3 ? lady(i) : guy(i)}</g>`).join("");
+$("#figdefs").insertAdjacentHTML("beforeend", figDefs);
+const av = (i, cls="") => `<svg viewBox="20 4 80 80" class="${cls}" aria-hidden="true"><rect x="0" y="0" width="120" height="120" fill="#ffe3e0"/><use href="#fig${(+i||0)%6}"/></svg>`;
+const fullFig = i => `<svg viewBox="-6 0 132 316" aria-hidden="true"><ellipse cx="60" cy="308" rx="52" ry="7" fill="#000" opacity=".25"/><use href="#fig${(+i||0)%6}"/></svg>`;
+const giftIcon = c => `<svg viewBox="0 0 28 28" aria-hidden="true"><rect x="4" y="11" width="20" height="14" rx="2" fill="${c}" ${st} stroke-width="2"/><rect x="2" y="7" width="24" height="6" rx="1.5" fill="#e8b64a" ${st} stroke-width="2"/><path d="M14 7 V25" stroke="${INK}" stroke-width="2"/><path d="M14 7 C10 1 4 4 9 7 M14 7 C18 1 24 4 19 7" fill="none" ${st} stroke-width="2"/></svg>`;
+
+/* la bolita de amigos en la portada */
+{
+  const xs = [0, 92, 196, 300, 400, 500], sc = [1, 1, 1, 1.04, 1.04, 1.06];
+  let g = `<g filter="url(#rough)">`;
+  xs.forEach((x,i) => { g += `<ellipse cx="${x+60}" cy="312" rx="48" ry="6" fill="#000" opacity=".22"/><g transform="translate(${x} ${310-310*sc[i]}) scale(${sc[i]})"><use href="#fig${i}"/></g>`; });
+  g += `</g>`;
+  const star = (x,y,r,c) => `<path d="M${x} ${y-r} L${x+r*.28} ${y-r*.28} L${x+r} ${y} L${x+r*.28} ${y+r*.28} L${x} ${y+r} L${x-r*.28} ${y+r*.28} L${x-r} ${y} L${x-r*.28} ${y-r*.28}Z" fill="${c}"/>`;
+  g += star(170,40,10,"#e8b64a") + star(392,22,7,"#fff") + star(600,80,9,"#e8b64a") + star(40,110,6,"#fff");
+  g += `<path d="M268 6 q8 -10 16 0 q8 10 16 0" fill="none" stroke="#e8b64a" stroke-width="3" stroke-linecap="round"/>`;
+  $("#crew").innerHTML = g;
+}
+
+/* papel picado + foquitos */
+{
+  const cols = ["#e8b64a","#fff4e8","#18b07d","#ff6fa5","#3c8cff","#ff8a3d"];
+  const n = 16, w = 1200/n;
+  let g = `<path d="M0 8 Q600 26 1200 8" stroke="#1a1110" stroke-width="2.5" fill="none"/>`;
+  for (let i=0;i<n;i++){
+    const x=i*w+5, y=10+Math.sin(i/(n-1)*Math.PI)*9, ww=w-10, h=48;
+    let cut = `M${x} ${y} h${ww} v${h}`;
+    for (let k=0;k<6;k++) cut += ` l-${ww/12} 8 l-${ww/12} -8`;
+    cut += " Z";
+    g += `<path d="${cut}" fill="${cols[i%cols.length]}" stroke="#1a1110" stroke-width="1.5"/>`;
+    const cx = x+ww/2, cy = y+22, hc = "#9e0d1a";
+    g += `<path d="M${cx} ${cy-9} L${cx+7} ${cy} L${cx} ${cy+9} L${cx-7} ${cy}Z" fill="${hc}"/><circle cx="${cx-17}" cy="${cy}" r="3" fill="${hc}"/><circle cx="${cx+17}" cy="${cy}" r="3" fill="${hc}"/><circle cx="${cx}" cy="${cy-17}" r="2.2" fill="${hc}"/>`;
+  }
+  $("#flags").innerHTML = g;
+}
+
+/* ================= estado ================= */
 let token = new URLSearchParams(location.search).get("t") || ls.get("posada_token");
 if (token) ls.set("posada_token", token);
 let pin = ls.get("posada_pin") || "";
 let S = {participants:[],drawn:false,me:null,mine:null};
-let editing = false, rotation = 0, revealed = false, lastNames = "";
+let editing = false, rotation = 0, revealed = false, lastKey = "", spinning = false;
 
-/* papel picado */
-{
-  const cols = ["#e8b64a","#fff","#16b07a","#ff6fa5","#3c8cff","#fff"];
-  let g = "", w = 1200/14;
-  g += '<path d="M0 6 Q600 22 1200 6" stroke="#fff" stroke-opacity=".6" fill="none" stroke-width="2"/>';
-  for (let i=0;i<14;i++){const x=i*w+6,y=8+Math.sin(i/13*Math.PI)*8;
-    g += `<path d="M${x} ${y} h${w-12} v34 l-${(w-12)/6} 10 l-${(w-12)/6} -10 l-${(w-12)/6} 10 l-${(w-12)/6} -10 l-${(w-12)/6} 10 l-${(w-12)/6} -10 Z" fill="${cols[i%cols.length]}" opacity=".95"/>`;}
-  $("#flags").innerHTML = g;
-}
-
-function drawWheel(names){
-  const key = names.join("|");
-  if (key === lastNames) return; lastNames = key;
-  const list = names.length ? names : ["Tú","¿Quién más?","Apúntate","Amigos","Posada","Regalos"];
+const WCOL = ["#c8142a","#1a1110","#e8b64a","#ff5466","#3a2421","#f6d27f"];
+function drawWheel(ps){
+  const key = ps.map(p=>p.name+p.avatar).join("|");
+  if (key === lastKey) return; lastKey = key;
+  const demo = !ps.length;
+  const list = demo ? NAMES.map((n,i)=>({name:"¿Tú?",avatar:i})) : ps;
   const n = list.length, R = 200, a = 2*Math.PI/n;
-  let g = `<circle r="${R+6}" fill="#16110f"/>`;
-  list.forEach((name,i)=>{
+  let g = `<circle r="${R+12}" fill="#1a1110"/><circle r="${R+12}" fill="none" stroke="#e8b64a" stroke-width="3"/>`;
+  list.forEach((p,i)=>{
     const a0 = -Math.PI/2 + i*a - a/2, a1 = a0 + a;
-    const c = COLORS[i % COLORS.length === 0 && i === n-1 && n>1 ? 1 : i % COLORS.length];
-    const dark = c === "#e8b64a" || c === "#f3d27e";
-    const large = a > Math.PI ? 1 : 0;
+    let ci = i % WCOL.length; if (i === n-1 && ci === 0 && n > 1) ci = 1;
+    const c = WCOL[ci], dark = ci === 2 || ci === 5;
     const path = n === 1 ? `<circle r="${R}" fill="${c}"/>` :
-      `<path d="M0 0 L${R*Math.cos(a0)} ${R*Math.sin(a0)} A${R} ${R} 0 ${large} 1 ${R*Math.cos(a1)} ${R*Math.sin(a1)} Z" fill="${c}" stroke="#16110f" stroke-width="2"/>`;
-    const mid = (-90 + i*360/n), m = ((mid%360)+360)%360, flip = m > 90 && m < 270;
+      `<path d="M0 0 L${R*Math.cos(a0)} ${R*Math.sin(a0)} A${R} ${R} 0 ${a>Math.PI?1:0} 1 ${R*Math.cos(a1)} ${R*Math.sin(a1)} Z" fill="${c}" stroke="#1a1110" stroke-width="2.5"/>`;
+    const mid = -90 + i*360/n, m = ((mid%360)+360)%360, flip = m > 90 && m < 270;
+    const arcLen = a * (R-40);
+    const head = n <= 16 ? Math.min(58, arcLen*0.8) : 0;
     const fs = n > 16 ? 13 : n > 10 ? 15 : 18;
-    const label = name.length > 14 ? name.slice(0,13)+"…" : name;
-    g += path + `<text transform="rotate(${mid}) translate(${R-16} 0)${flip?" rotate(180)":""}" text-anchor="${flip?"start":"end"}" dominant-baseline="middle" font-family="Figtree,sans-serif" font-weight="800" font-size="${fs}" fill="${dark?"#2a1a00":"#fff"}" opacity="${names.length?1:.55}">${esc(label)}</text>`;
+    const label = p.name.length > 12 ? p.name.slice(0,11)+"…" : p.name;
+    const textR = head ? R - head - 16 : R - 14;
+    g += path;
+    if (head) g += `<g transform="rotate(${mid}) translate(${R-head/2-10} 0) rotate(90)"><circle r="${head/2+2}" fill="#fff8f1" stroke="#1a1110" stroke-width="2.5"/><svg x="${-head/2}" y="${-head/2}" width="${head}" height="${head}" viewBox="20 4 80 80"><clipPath id="wc${i}"><circle cx="60" cy="44" r="40"/></clipPath><g clip-path="url(#wc${i})"><use href="#fig${(+p.avatar||0)%6}"/></g></svg></g>`;
+    g += `<text transform="rotate(${mid}) translate(${textR} 0)${flip?" rotate(180)":""}" text-anchor="${flip?"start":"end"}" dominant-baseline="middle" font-family="Figtree,sans-serif" font-weight="800" font-size="${fs}" fill="${dark?"#2a1a00":"#fff"}" opacity="${demo?.7:1}">${esc(label)}</text>`;
   });
-  for (let i=0;i<24;i++){const t=i/24*2*Math.PI;g+=`<circle cx="${(R+1)*Math.cos(t)}" cy="${(R+1)*Math.sin(t)}" r="3.4" fill="#e8b64a"/>`;}
+  for (let i=0;i<28;i++){const t=i/28*2*Math.PI;g+=`<circle class="bulb" cx="${(R+6)*Math.cos(t)}" cy="${(R+6)*Math.sin(t)}" r="4" fill="${i%2?"#fff4c8":"#e8b64a"}"/>`;}
   $("#wheel").innerHTML = g;
 }
 
 function spinTo(index, n){
-  // la rebanada i está centrada en -90 + i*360/n; el puntero está arriba (-90)
+  spinning = true;
   const target = -index*360/n;
-  const turns = 6*360;
   const base = rotation - (rotation % 360);
-  rotation = base + turns + ((target % 360) + 360) % 360 + (Math.random()-.5)*(300/n)*.6;
-  const box = $("#wheelbox"); box.classList.add("spinning");
+  rotation = base + 6*360 + ((target % 360) + 360) % 360 + (Math.random()-.5)*(300/n)*.6;
+  $("#wheelbox").classList.add("spinning");
   $("#wheelSvg").style.transform = `rotate(${rotation}deg)`;
-  return new Promise(r => setTimeout(r, 5300));
+  $("#wheelcap").textContent = "girando…";
+  return new Promise(r => setTimeout(()=>{ spinning=false; r(); }, 5500));
+}
+
+function confetti(el){
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const cols = ["#e8b64a","#ff5466","#fff","#18b07d","#3c8cff","#ff6fa5"];
+  for (let i=0;i<70;i++){
+    const d = document.createElement("i"); d.className = "confetti";
+    d.style.left = Math.random()*100+"%"; d.style.background = cols[i%cols.length];
+    d.style.animationDelay = (Math.random()*.6)+"s"; d.style.animationDuration = (2+Math.random()*1.5)+"s";
+    el.appendChild(d); setTimeout(()=>d.remove(), 4200);
+  }
 }
 
 async function api(action, body){
@@ -199,23 +392,25 @@ async function api(action, body){
   return j;
 }
 
-function giftLi(g){
+const GC = ["#c8142a","#18b07d","#3c8cff","#ff6fa5","#ff8a3d"];
+function giftLi(g, k){
   const u = safeUrl(g.url);
-  return `<li><b>${esc(g.title)}</b>${g.price?` <span class="price">· ${esc(g.price)}</span>`:""}
+  return `<li class="tag">${giftIcon(GC[k%GC.length])}<div><b>${esc(g.title)}</b>${g.price?` <span class="price">· ${esc(g.price)}</span>`:""}
     ${u?`<br><a class="buy" href="${esc(u)}" target="_blank" rel="noopener">Dónde comprarlo ↗</a>`:""}
-    ${g.note?`<br><span class="hint">${esc(g.note)}</span>`:""}</li>`;
+    ${g.note?`<br><span class="hint">${esc(g.note)}</span>`:""}</div></li>`;
 }
 
 function render(){
   const ps = S.participants;
   $("#nCount").textContent = ps.length;
   $("#nGifts").textContent = ps.reduce((s,p)=>s+p.gifts.length,0);
-  $("#nState").textContent = S.drawn ? "Sorteado" : "Abierto";
-  drawWheel(ps.map(p=>p.name));
+  $("#nState").textContent = S.drawn ? "¡Hecho!" : "Abierto";
+  drawWheel(ps);
+  if (!spinning) $("#wheelcap").textContent = S.drawn ? "¡ya quedó el sorteo!" : ps.length ? `${ps.length} en la ruleta` : "¡a ver a quién le toca!";
 
-  $("#people").innerHTML = ps.length ? ps.map(p=>`<div class="card person"><h3>${esc(p.name)} <small>${p.gifts.length} ${p.gifts.length===1?"regalo":"regalos"}</small></h3>
-    ${p.gifts.length?`<ul>${p.gifts.map(giftLi).join("")}</ul>`:`<p class="empty">Aún no sube su lista.</p>`}</div>`).join("")
-    : `<p class="empty">Nadie se ha apuntado todavía. Sé el primero.</p>`;
+  $("#people").innerHTML = ps.length ? ps.map(p=>`<div class="card person"><div class="phead"><span class="av">${av(p.avatar)}</span><div><h3>${esc(p.name)}</h3><small>${p.gifts.length} ${p.gifts.length===1?"regalo":"regalos"} en su lista</small></div></div>
+    ${p.gifts.length?`<ul class="tags">${p.gifts.map(giftLi).join("")}</ul>`:`<p class="emptyhand hand">todavía no sube su lista…</p>`}</div>`).join("")
+    : `<div class="card"><p class="emptyhand hand">Nadie se ha apuntado todavía. ¡Sé el primero!</p></div>`;
 
   renderReveal();
   if (!editing) renderMe();
@@ -227,25 +422,29 @@ function renderReveal(){
   if (!S.drawn || !S.me){ sec.hidden = true; return; }
   sec.hidden = false;
   if (!revealed){
-    sec.innerHTML = `<div class="reveal"><h2>¡Ya se hizo el sorteo!</h2>
-      <p>${esc(S.me.name)}, gira la ruleta para descubrir a quién le regalas. Que nadie vea tu pantalla.</p>
-      <div class="actions"><button class="btn gold" id="spinMe">Girar y descubrir</button></div></div>`;
+    sec.innerHTML = `<div class="reveal"><div><h2>¡Ya se hizo el sorteo!</h2>
+      <p class="hand">${esc(S.me.name)}, tapa tu pantalla…</p>
+      <p>Gira la ruleta para descubrir a quién le regalas.</p>
+      <div class="actions"><button class="btn gold" id="spinMe">Girar y descubrir</button></div></div>
+      <div class="fig">${fullFig(S.me.avatar)}</div></div>`;
     $("#spinMe").onclick = async e => {
       e.target.disabled = true;
-      const names = S.participants.map(p=>p.name);
       const idx = S.participants.findIndex(p=>p.id===S.mine?.id);
-      document.querySelector(".hero").scrollIntoView({behavior:"smooth"});
-      await spinTo(Math.max(idx,0), names.length);
+      $("#wheelbox").scrollIntoView({behavior:"smooth",block:"center"});
+      await spinTo(Math.max(idx,0), S.participants.length);
+      $("#wheelcap").textContent = "¡te tocó!";
       revealed = true; renderReveal();
-      sec.scrollIntoView({behavior:"smooth"});
+      setTimeout(()=>sec.scrollIntoView({behavior:"smooth"}), 700);
     };
     return;
   }
   const m = S.mine;
-  sec.innerHTML = `<div class="reveal"><h2>Te tocó regalarle a</h2><div class="big">${esc(m?.name || "—")}</div>
-    <div class="wish"><b>Su lista de deseos</b>${m && m.gifts.length?`<ul>${m.gifts.map(giftLi).join("")}</ul>`:`<p class="empty">Todavía no sube su lista. Revisa más tarde.</p>`}</div>
-    <div class="actions"><button class="btn ghost small" id="hideMe" style="color:inherit">Ocultar</button></div></div>`;
+  sec.innerHTML = `<div class="reveal" id="revCard"><div><h2>Te tocó regalarle a</h2><div class="big">${esc(m?.name || "—")}</div>
+    <div class="wish"><span class="lbl">Su lista de deseos</span>${m && m.gifts.length?`<ul class="tags">${m.gifts.map(giftLi).join("")}</ul>`:`<p class="empty">Todavía no sube su lista. Revisa más tarde.</p>`}</div>
+    <div class="actions"><button class="btn ghost small" id="hideMe">Ocultar</button><span class="hand">shhh, es secreto</span></div></div>
+    <div class="fig">${fullFig(m?.avatar)}</div></div>`;
   $("#hideMe").onclick = () => { revealed = false; renderReveal(); };
+  confetti($("#revCard"));
 }
 
 function giftRow(g={}){
@@ -254,13 +453,16 @@ function giftRow(g={}){
     <input placeholder="Precio aprox." value="${esc(g.price||"")}" maxlength="30" aria-label="Precio">
     <button type="button" class="x" aria-label="Quitar">×</button></div>`;
 }
+const picker = sel => `<span class="lbl">Elige tu garabato</span><div class="pick">${NAMES.map((n,i)=>`<label><input type="radio" name="avatar" value="${i}" ${i===sel?"checked":""}><span class="av">${av(i)}</span>${n}</label>`).join("")}</div>`;
 function readGifts(root){
   return [...root.querySelectorAll(".gift")].map(r=>{const i=r.querySelectorAll("input");return{title:i[0].value,url:i[1].value,price:i[2].value}}).filter(g=>g.title.trim());
 }
-function wireGifts(root){
-  root.querySelector("#addGift").onclick = () => { if (root.querySelectorAll(".gift").length<12) root.querySelector("#gifts").insertAdjacentHTML("beforeend", giftRow()); };
-  root.querySelector("#gifts").onclick = e => { if (e.target.classList.contains("x")) e.target.closest(".gift").remove(); };
+const readAvatar = root => +(root.querySelector("[name=avatar]:checked")?.value || 0);
+function wireForm(root){
+  root.querySelector("#addGift").onclick = () => { if (root.querySelectorAll(".gift").length<12) root.querySelector("#gifts").insertAdjacentHTML("beforeend", giftRow()); editing = true; };
+  root.querySelector("#gifts").onclick = e => { if (e.target.classList.contains("x")) { e.target.closest(".gift").remove(); editing = true; } };
   root.addEventListener("input", () => editing = true);
+  root.addEventListener("change", e => { editing = true; if (e.target.name === "avatar"){ const big = root.querySelector(".me .av"); if (big) big.innerHTML = av(e.target.value); } });
 }
 
 function renderMe(){
@@ -268,18 +470,19 @@ function renderMe(){
   const personal = token ? `${location.origin}/?t=${token}` : "";
   if (!me){
     if (S.drawn){ sec.innerHTML = `<div class="card"><h2>El sorteo ya se hizo</h2><p>Si ya te habías apuntado, abre tu link personal en este teléfono para ver a quién le regalas.</p></div>`; return; }
-    sec.innerHTML = `<h2>Apúntate</h2><form class="card" id="joinForm">
+    sec.innerHTML = `<h2>Apúntate</h2><p class="sub">Tarda un minuto. Luego puedes cambiar tu lista cuando quieras.</p><form class="card" id="joinForm">
+      ${picker(Math.floor(Math.random()*6))}
       <div class="row2"><div class="field"><label for="jName">Tu nombre</label><input id="jName" maxlength="40" autocomplete="given-name" required></div>
-      <div class="field"><label for="jEmail">Tu correo</label><input id="jEmail" type="email" autocomplete="email" maxlength="120"><div class="hint">Para mandarte a quién le regalas.</div></div></div>
-      <label>Tu lista de deseos</label><div id="gifts">${giftRow()}${giftRow()}</div>
+      <div class="field"><label for="jEmail">Tu correo</label><input id="jEmail" type="email" autocomplete="email" maxlength="120"><div class="hint">Para avisarte a quién le regalas.</div></div></div>
+      <span class="lbl">Tu lista de deseos</span><div id="gifts">${giftRow()}${giftRow()}</div>
       <button type="button" class="btn ghost small" id="addGift">+ Otro regalo</button>
       <div class="actions"><button class="btn" type="submit">Entrar al intercambio</button></div>
       <div class="msg" id="joinMsg"></div></form>`;
-    const f = $("#joinForm"); wireGifts(f);
+    const f = $("#joinForm"); wireForm(f);
     f.onsubmit = async e => {
       e.preventDefault(); const b = f.querySelector("[type=submit]"); b.disabled = true;
       try{
-        const r = await api("join",{name:$("#jName").value,email:$("#jEmail").value,gifts:readGifts(f)});
+        const r = await api("join",{name:$("#jName").value,email:$("#jEmail").value,gifts:readGifts(f),avatar:readAvatar(f)});
         token = r.token; ls.set("posada_token", token); editing = false;
         history.replaceState(null,"",`/?t=${token}`);
         await load();
@@ -288,20 +491,22 @@ function renderMe(){
     };
     return;
   }
-  sec.innerHTML = `<h2>Hola, ${esc(me.name)}</h2><form class="card" id="meForm">
+  sec.innerHTML = `<form class="card me" id="meForm"><span class="av">${av(me.avatar)}</span><div>
+    <h2>Hola, ${esc(me.name)}</h2><p class="sub">Ya estás en la ruleta.</p>
     <div class="link"><code>${esc(personal)}</code><button type="button" class="btn small" id="copy">Copiar</button></div>
-    <p class="hint">Este es tu link personal. Guárdalo: con él ves a quién le regalas desde cualquier teléfono. No lo compartas.</p>
-    <div class="field" style="margin-top:14px"><label for="mEmail">Tu correo</label><input id="mEmail" type="email" value="${esc(me.email)}" maxlength="120"></div>
-    <label>Tu lista de deseos</label><div id="gifts">${(me.gifts.length?me.gifts:[{}]).map(giftRow).join("")}</div>
+    <p class="hint">Tu link personal: con él ves a quién le regalas desde cualquier teléfono. Guárdalo y no lo compartas.</p>
+    <div style="margin-top:18px">${picker(me.avatar)}</div>
+    <div class="field"><label for="mEmail">Tu correo</label><input id="mEmail" type="email" value="${esc(me.email)}" maxlength="120"></div>
+    <span class="lbl">Tu lista de deseos</span><div id="gifts">${(me.gifts.length?me.gifts:[{}]).map(giftRow).join("")}</div>
     <button type="button" class="btn ghost small" id="addGift">+ Otro regalo</button>
-    <div class="actions"><button class="btn" type="submit">Guardar mi lista</button>
+    <div class="actions"><button class="btn" type="submit">Guardar cambios</button>
     ${S.drawn?"":`<button type="button" class="btn ghost" id="leave">Salirme</button>`}</div>
-    <div class="msg" id="meMsg"></div></form>`;
-  const f = $("#meForm"); wireGifts(f);
+    <div class="msg" id="meMsg"></div></div></form>`;
+  const f = $("#meForm"); wireForm(f);
   $("#copy").onclick = async () => { try{ await navigator.clipboard.writeText(personal); $("#copy").textContent="¡Copiado!"; }catch{ $("#copy").textContent="Cópialo a mano"; } };
   f.onsubmit = async e => {
     e.preventDefault();
-    try{ await api("me",{email:$("#mEmail").value,gifts:readGifts(f)}); editing=false; $("#meMsg").className="msg ok"; await load(); $("#meMsg") && ($("#meMsg").className="msg ok", $("#meMsg").textContent="Guardado."); }
+    try{ await api("me",{email:$("#mEmail").value,gifts:readGifts(f),avatar:readAvatar(f)}); editing=false; await load(); const m=$("#meMsg"); if(m){m.className="msg ok";m.textContent="¡Guardado!";} }
     catch(err){ $("#meMsg").className="msg err"; $("#meMsg").textContent = err.message; }
   };
   const lv = $("#leave");
@@ -335,11 +540,11 @@ function renderOrg(){
        <div class="actions"><button class="btn gold" id="go" ${n<3?"disabled":""}>Girar la ruleta y sortear (${n})</button></div>
        ${n<3?`<p class="hint">Se necesitan al menos 3 personas.</p>`:""}
        <div class="msg" id="orgMsg"></div>
-       <div style="margin-top:14px">${S.participants.map(p=>`<div class="orgrow"><span>${esc(p.name)}</span><button class="btn ghost small" data-rm="${esc(p.id)}">Quitar</button></div>`).join("")}</div>`;
+       <div style="margin-top:14px">${S.participants.map(p=>`<div class="orgrow"><span><span class="av">${av(p.avatar)}</span>${esc(p.name)}</span><button class="btn ghost small" data-rm="${esc(p.id)}">Quitar</button></div>`).join("")}</div>`;
   const go = $("#go");
   if (go) go.onclick = async () => {
     go.disabled = true;
-    document.querySelector(".hero").scrollIntoView({behavior:"smooth"});
+    $("#wheelbox").scrollIntoView({behavior:"smooth",block:"center"});
     try{
       const r = await api("admin",{pin,op:"draw"});
       await spinTo(Math.floor(Math.random()*n), n);
@@ -360,15 +565,12 @@ function renderOrg(){
 }
 
 async function load(){
-  try{
-    S = await api("state");
-    if (token && !S.me && !S.drawn){ /* token viejo */ }
-    render();
-  }catch(err){ console.error(err); }
+  try{ S = await api("state"); render(); }catch(err){ console.error(err); }
 }
+drawWheel([]);
 if (pin) api("admin",{pin,op:"check"}).then(()=>{orgOk=true;renderOrg()}).catch(()=>{});
 load();
-setInterval(() => { if (!document.hidden && !$("#wheelbox").classList.contains("spinning-now")) load(); }, 6000);
+setInterval(() => { if (!document.hidden && !spinning) load(); }, 6000);
 }
 </script>
 </body>
