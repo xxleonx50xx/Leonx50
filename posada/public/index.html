@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Intercambio de la Posada</title>
+<meta name="description" content="Apúntate, sube tu lista de deseos y descubre en secreto a quién le regalas.">
+<meta name="theme-color" content="#a50f1c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎁</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Figtree:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE occasion: posada de amigos, festiva pero elegante (vestidos rojos, trajes negros)
+   IDEA una ruleta de feria navideña bajo papel picado
+   PICTURE la ruleta grande con los nombres reales de quienes ya se apuntaron
+   COLOUR rojo posada #a50f1c, negro, oro #e8b64a, blanco
+   TYPE Archivo Black + Figtree
+   LAYOUT laptop: título y acciones a la izquierda, ruleta a la derecha; teléfono: título, ruleta, acciones */
+:root{--red:#a50f1c;--red2:#7d0a14;--gold:#e8b64a;--ink:#16110f;--bg:#fff;--card:#fff;--line:#e7dcd8;--soft:#f7efed;--muted:#6b5b57;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--ink:#f6eeea;--bg:#140d0c;--card:#1e1514;--line:#3a2a28;--soft:#241a19;--muted:#b9a7a2;color-scheme:dark}}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 Figtree,system-ui,sans-serif;overflow-x:clip}
+.wrap{max-width:1100px;margin:0 auto;padding-left:max(5vw,16px,env(safe-area-inset-left,0px));padding-right:max(5vw,16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:"Archivo Black",Impact,sans-serif;font-weight:400;letter-spacing:-.01em;line-height:1.05;margin:0}
+h2{font-size:clamp(24px,4vw,32px);margin-bottom:14px}
+.hero{background:var(--red);color:#fff;position:relative;margin-top:calc(-1*env(safe-area-inset-top,0px));padding-top:calc(env(safe-area-inset-top,0px) + 70px);padding-bottom:40px;overflow:hidden}
+.flags{position:absolute;top:env(safe-area-inset-top,0px);left:0;right:0;height:64px}
+.hero .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px;align-items:center}
+.hero h1{font-size:clamp(38px,7vw,64px)}
+.hero p{font-size:18px;max-width:30em;opacity:.92;margin:14px 0 22px}
+.stat{display:flex;gap:22px;flex-wrap:wrap}
+.stat b{display:block;font:400 34px "Archivo Black",sans-serif;color:var(--gold)}
+.stat span{font-size:14px;opacity:.85}
+.wheelbox{position:relative;aspect-ratio:1;width:100%;max-width:440px;justify-self:center}
+.wheelbox svg{width:100%;height:100%;display:block}
+#wheelSvg{transform-origin:50% 50%;will-change:transform}
+.spinning #wheelSvg{transition:transform 5.2s cubic-bezier(.12,.67,.12,1)}
+.hub{position:absolute;left:50%;top:50%;width:17%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:#16110f;border:4px solid var(--gold);display:grid;place-items:center;font-size:clamp(18px,4vw,26px)}
+.pointer{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:16px solid transparent;border-right:16px solid transparent;border-top:30px solid var(--gold);filter:drop-shadow(0 2px 0 rgba(0,0,0,.35));z-index:2}
+main{padding-block:36px 60px}
+section{margin-bottom:44px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px}
+label{display:block;font-weight:600;font-size:15px;margin:0 0 6px}
+input{width:100%;font:16px Figtree,sans-serif;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+input:focus{outline:none;border-color:var(--red)}
+.row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.field{margin-bottom:14px}
+.hint{font-size:14px;color:var(--muted);margin-top:4px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 22px;border-radius:999px;border:0;font:800 16px Figtree,sans-serif;cursor:pointer;background:var(--red);color:#fff;text-decoration:none}
+.btn:hover{background:var(--red2)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.gold{background:var(--gold);color:#2a1a00}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn.small{min-height:38px;padding:0 14px;font-size:14px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.gift{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1.5fr) minmax(0,.7fr) 40px;gap:8px;margin-bottom:8px;align-items:center}
+.x{width:40px;height:44px;border:0;background:var(--soft);border-radius:10px;font-size:20px;cursor:pointer;color:var(--muted)}
+.people{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.person h3{font-size:20px;margin-bottom:8px;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.person h3 small{font:600 13px Figtree,sans-serif;color:var(--muted)}
+.person ul,.wish ul{list-style:none;margin:0;padding:0}
+.person li,.wish li{padding:8px 0;border-top:1px solid var(--line);font-size:15px}
+.person li:first-child,.wish li:first-child{border-top:0}
+.price{color:var(--muted);white-space:nowrap}
+a.buy{color:var(--red);font-weight:700;overflow-wrap:anywhere}
+@media (prefers-color-scheme:dark){a.buy{color:#ff7b86}}
+.empty{color:var(--muted);font-size:15px}
+.reveal{background:var(--ink);color:var(--bg);border-radius:20px;padding:26px;text-align:left}
+.reveal h2{color:var(--gold)}
+.big{font:400 clamp(40px,9vw,72px)/1 "Archivo Black",sans-serif;color:#fff;margin:6px 0 14px;overflow-wrap:anywhere}
+@media (prefers-color-scheme:dark){.big{color:var(--ink)}.reveal{background:#2a1c1a;color:var(--ink)}}
+.wish{background:var(--card);color:var(--ink);border-radius:14px;padding:16px;margin-top:10px}
+.link{display:flex;gap:8px;align-items:center;background:var(--soft);border-radius:10px;padding:10px 12px;font-size:14px;overflow-wrap:anywhere}
+.link code{flex:1;font-size:13px}
+.msg{min-height:22px;font-weight:600;margin-top:10px}
+.msg.err{color:#d11a2a}
+.msg.ok{color:#1b8a4b}
+details.org summary{cursor:pointer;font-weight:800;color:var(--muted);padding:10px 0}
+.orgrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+footer{color:var(--muted);font-size:14px;padding-bottom:40px}
+@media (max-width:760px){
+  .hero .wrap{grid-template-columns:minmax(0,1fr)}
+  .wheelbox{max-width:330px;order:2}
+  .hero{padding-top:calc(env(safe-area-inset-top,0px) + 58px);padding-bottom:28px}
+  .hero .wrap{gap:18px}
+  .hero p{font-size:16px;margin:10px 0 14px}
+  .stat{gap:18px}
+  .stat b{font-size:24px}
+  .stat span{font-size:13px}
+  .hero .txt{order:1}
+  .row2{grid-template-columns:minmax(0,1fr)}
+  .gift{grid-template-columns:minmax(0,1fr) 40px;background:var(--soft);padding:10px;border-radius:12px}
+  .gift input:nth-child(2),.gift input:nth-child(3){grid-column:1}
+  .gift .x{grid-row:1;grid-column:2}
+}
+@media (prefers-reduced-motion:reduce){.spinning #wheel{transition-duration:.01s}}
+</style>
+</head>
+<body>
+<header class="hero">
+  <svg class="flags" viewBox="0 0 1200 64" preserveAspectRatio="none" aria-hidden="true" id="flags"></svg>
+  <div class="wrap">
+    <div class="txt">
+      <h1>Intercambio de la Posada</h1>
+      <p id="lead">Apúntate, sube tu lista de deseos con el link de dónde comprar, y el día de la posada giramos la ruleta. A cada quien le sale su persona en secreto.</p>
+      <div class="stat">
+        <div><b id="nCount">0</b><span>apuntados</span></div>
+        <div><b id="nGifts">0</b><span>regalos en listas</span></div>
+        <div><b id="nState">Abierto</b><span>estado</span></div>
+      </div>
+    </div>
+    <div class="wheelbox" id="wheelbox">
+      <div class="pointer"></div>
+      <svg id="wheelSvg" viewBox="-210 -210 420 420" aria-label="Ruleta con los nombres de los participantes"><g id="wheel"></g></svg>
+      <div class="hub" aria-hidden="true">🎁</div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="revealSec" hidden></section>
+  <section id="meSec"></section>
+  <section>
+    <h2>Las listas de deseos</h2>
+    <div class="people" id="people"></div>
+  </section>
+  <section>
+    <details class="org" id="orgBox">
+      <summary>Soy el organizador</summary>
+      <div class="card" id="orgCard"></div>
+    </details>
+  </section>
+  <footer>Tus datos solo se usan para este intercambio. El sorteo lo hace el servidor; ni el organizador ve las parejas.</footer>
+</main>
+
+<script>
+{
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const safeUrl = u => /^https?:\/\//i.test(u || "") ? u : "";
+const COLORS = ["#a50f1c","#16110f","#e8b64a","#d8343f","#2b201d","#f3d27e"];
+const ls = {get(k){try{return localStorage.getItem(k)}catch{return null}},set(k,v){try{localStorage.setItem(k,v)}catch{}},del(k){try{localStorage.removeItem(k)}catch{}}};
+
+let token = new URLSearchParams(location.search).get("t") || ls.get("posada_token");
+if (token) ls.set("posada_token", token);
+let pin = ls.get("posada_pin") || "";
+let S = {participants:[],drawn:false,me:null,mine:null};
+let editing = false, rotation = 0, revealed = false, lastNames = "";
+
+/* papel picado */
+{
+  const cols = ["#e8b64a","#fff","#16b07a","#ff6fa5","#3c8cff","#fff"];
+  let g = "", w = 1200/14;
+  g += '<path d="M0 6 Q600 22 1200 6" stroke="#fff" stroke-opacity=".6" fill="none" stroke-width="2"/>';
+  for (let i=0;i<14;i++){const x=i*w+6,y=8+Math.sin(i/13*Math.PI)*8;
+    g += `<path d="M${x} ${y} h${w-12} v34 l-${(w-12)/6} 10 l-${(w-12)/6} -10 l-${(w-12)/6} 10 l-${(w-12)/6} -10 l-${(w-12)/6} 10 l-${(w-12)/6} -10 Z" fill="${cols[i%cols.length]}" opacity=".95"/>`;}
+  $("#flags").innerHTML = g;
+}
+
+function drawWheel(names){
+  const key = names.join("|");
+  if (key === lastNames) return; lastNames = key;
+  const list = names.length ? names : ["Tú","¿Quién más?","Apúntate","Amigos","Posada","Regalos"];
+  const n = list.length, R = 200, a = 2*Math.PI/n;
+  let g = `<circle r="${R+6}" fill="#16110f"/>`;
+  list.forEach((name,i)=>{
+    const a0 = -Math.PI/2 + i*a - a/2, a1 = a0 + a;
+    const c = COLORS[i % COLORS.length === 0 && i === n-1 && n>1 ? 1 : i % COLORS.length];
+    const dark = c === "#e8b64a" || c === "#f3d27e";
+    const large = a > Math.PI ? 1 : 0;
+    const path = n === 1 ? `<circle r="${R}" fill="${c}"/>` :
+      `<path d="M0 0 L${R*Math.cos(a0)} ${R*Math.sin(a0)} A${R} ${R} 0 ${large} 1 ${R*Math.cos(a1)} ${R*Math.sin(a1)} Z" fill="${c}" stroke="#16110f" stroke-width="2"/>`;
+    const mid = (-90 + i*360/n), m = ((mid%360)+360)%360, flip = m > 90 && m < 270;
+    const fs = n > 16 ? 13 : n > 10 ? 15 : 18;
+    const label = name.length > 14 ? name.slice(0,13)+"…" : name;
+    g += path + `<text transform="rotate(${mid}) translate(${R-16} 0)${flip?" rotate(180)":""}" text-anchor="${flip?"start":"end"}" dominant-baseline="middle" font-family="Figtree,sans-serif" font-weight="800" font-size="${fs}" fill="${dark?"#2a1a00":"#fff"}" opacity="${names.length?1:.55}">${esc(label)}</text>`;
+  });
+  for (let i=0;i<24;i++){const t=i/24*2*Math.PI;g+=`<circle cx="${(R+1)*Math.cos(t)}" cy="${(R+1)*Math.sin(t)}" r="3.4" fill="#e8b64a"/>`;}
+  $("#wheel").innerHTML = g;
+}
+
+function spinTo(index, n){
+  // la rebanada i está centrada en -90 + i*360/n; el puntero está arriba (-90)
+  const target = -index*360/n;
+  const turns = 6*360;
+  const base = rotation - (rotation % 360);
+  rotation = base + turns + ((target % 360) + 360) % 360 + (Math.random()-.5)*(300/n)*.6;
+  const box = $("#wheelbox"); box.classList.add("spinning");
+  $("#wheelSvg").style.transform = `rotate(${rotation}deg)`;
+  return new Promise(r => setTimeout(r, 5300));
+}
+
+async function api(action, body){
+  const opt = body ? {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...body,token})} : {};
+  const r = await fetch(`/api/${action}${body?"":(token?`?t=${encodeURIComponent(token)}`:"")}`, opt);
+  const j = await r.json().catch(()=>({error:"Sin respuesta del servidor"}));
+  if (!r.ok) throw new Error(j.error || "Error");
+  return j;
+}
+
+function giftLi(g){
+  const u = safeUrl(g.url);
+  return `<li><b>${esc(g.title)}</b>${g.price?` <span class="price">· ${esc(g.price)}</span>`:""}
+    ${u?`<br><a class="buy" href="${esc(u)}" target="_blank" rel="noopener">Dónde comprarlo ↗</a>`:""}
+    ${g.note?`<br><span class="hint">${esc(g.note)}</span>`:""}</li>`;
+}
+
+function render(){
+  const ps = S.participants;
+  $("#nCount").textContent = ps.length;
+  $("#nGifts").textContent = ps.reduce((s,p)=>s+p.gifts.length,0);
+  $("#nState").textContent = S.drawn ? "Sorteado" : "Abierto";
+  drawWheel(ps.map(p=>p.name));
+
+  $("#people").innerHTML = ps.length ? ps.map(p=>`<div class="card person"><h3>${esc(p.name)} <small>${p.gifts.length} ${p.gifts.length===1?"regalo":"regalos"}</small></h3>
+    ${p.gifts.length?`<ul>${p.gifts.map(giftLi).join("")}</ul>`:`<p class="empty">Aún no sube su lista.</p>`}</div>`).join("")
+    : `<p class="empty">Nadie se ha apuntado todavía. Sé el primero.</p>`;
+
+  renderReveal();
+  if (!editing) renderMe();
+  renderOrg();
+}
+
+function renderReveal(){
+  const sec = $("#revealSec");
+  if (!S.drawn || !S.me){ sec.hidden = true; return; }
+  sec.hidden = false;
+  if (!revealed){
+    sec.innerHTML = `<div class="reveal"><h2>¡Ya se hizo el sorteo!</h2>
+      <p>${esc(S.me.name)}, gira la ruleta para descubrir a quién le regalas. Que nadie vea tu pantalla.</p>
+      <div class="actions"><button class="btn gold" id="spinMe">Girar y descubrir</button></div></div>`;
+    $("#spinMe").onclick = async e => {
+      e.target.disabled = true;
+      const names = S.participants.map(p=>p.name);
+      const idx = S.participants.findIndex(p=>p.id===S.mine?.id);
+      document.querySelector(".hero").scrollIntoView({behavior:"smooth"});
+      await spinTo(Math.max(idx,0), names.length);
+      revealed = true; renderReveal();
+      sec.scrollIntoView({behavior:"smooth"});
+    };
+    return;
+  }
+  const m = S.mine;
+  sec.innerHTML = `<div class="reveal"><h2>Te tocó regalarle a</h2><div class="big">${esc(m?.name || "—")}</div>
+    <div class="wish"><b>Su lista de deseos</b>${m && m.gifts.length?`<ul>${m.gifts.map(giftLi).join("")}</ul>`:`<p class="empty">Todavía no sube su lista. Revisa más tarde.</p>`}</div>
+    <div class="actions"><button class="btn ghost small" id="hideMe" style="color:inherit">Ocultar</button></div></div>`;
+  $("#hideMe").onclick = () => { revealed = false; renderReveal(); };
+}
+
+function giftRow(g={}){
+  return `<div class="gift"><input placeholder="¿Qué quieres? Ej. Audífonos" value="${esc(g.title||"")}" maxlength="120" aria-label="Regalo">
+    <input placeholder="Link de dónde comprarlo" value="${esc(g.url||"")}" inputmode="url" aria-label="Link">
+    <input placeholder="Precio aprox." value="${esc(g.price||"")}" maxlength="30" aria-label="Precio">
+    <button type="button" class="x" aria-label="Quitar">×</button></div>`;
+}
+function readGifts(root){
+  return [...root.querySelectorAll(".gift")].map(r=>{const i=r.querySelectorAll("input");return{title:i[0].value,url:i[1].value,price:i[2].value}}).filter(g=>g.title.trim());
+}
+function wireGifts(root){
+  root.querySelector("#addGift").onclick = () => { if (root.querySelectorAll(".gift").length<12) root.querySelector("#gifts").insertAdjacentHTML("beforeend", giftRow()); };
+  root.querySelector("#gifts").onclick = e => { if (e.target.classList.contains("x")) e.target.closest(".gift").remove(); };
+  root.addEventListener("input", () => editing = true);
+}
+
+function renderMe(){
+  const sec = $("#meSec"), me = S.me;
+  const personal = token ? `${location.origin}/?t=${token}` : "";
+  if (!me){
+    if (S.drawn){ sec.innerHTML = `<div class="card"><h2>El sorteo ya se hizo</h2><p>Si ya te habías apuntado, abre tu link personal en este teléfono para ver a quién le regalas.</p></div>`; return; }
+    sec.innerHTML = `<h2>Apúntate</h2><form class="card" id="joinForm">
+      <div class="row2"><div class="field"><label for="jName">Tu nombre</label><input id="jName" maxlength="40" autocomplete="given-name" required></div>
+      <div class="field"><label for="jEmail">Tu correo</label><input id="jEmail" type="email" autocomplete="email" maxlength="120"><div class="hint">Para mandarte a quién le regalas.</div></div></div>
+      <label>Tu lista de deseos</label><div id="gifts">${giftRow()}${giftRow()}</div>
+      <button type="button" class="btn ghost small" id="addGift">+ Otro regalo</button>
+      <div class="actions"><button class="btn" type="submit">Entrar al intercambio</button></div>
+      <div class="msg" id="joinMsg"></div></form>`;
+    const f = $("#joinForm"); wireGifts(f);
+    f.onsubmit = async e => {
+      e.preventDefault(); const b = f.querySelector("[type=submit]"); b.disabled = true;
+      try{
+        const r = await api("join",{name:$("#jName").value,email:$("#jEmail").value,gifts:readGifts(f)});
+        token = r.token; ls.set("posada_token", token); editing = false;
+        history.replaceState(null,"",`/?t=${token}`);
+        await load();
+        $("#meSec").scrollIntoView({behavior:"smooth"});
+      }catch(err){ $("#joinMsg").className="msg err"; $("#joinMsg").textContent = err.message; b.disabled = false; }
+    };
+    return;
+  }
+  sec.innerHTML = `<h2>Hola, ${esc(me.name)}</h2><form class="card" id="meForm">
+    <div class="link"><code>${esc(personal)}</code><button type="button" class="btn small" id="copy">Copiar</button></div>
+    <p class="hint">Este es tu link personal. Guárdalo: con él ves a quién le regalas desde cualquier teléfono. No lo compartas.</p>
+    <div class="field" style="margin-top:14px"><label for="mEmail">Tu correo</label><input id="mEmail" type="email" value="${esc(me.email)}" maxlength="120"></div>
+    <label>Tu lista de deseos</label><div id="gifts">${(me.gifts.length?me.gifts:[{}]).map(giftRow).join("")}</div>
+    <button type="button" class="btn ghost small" id="addGift">+ Otro regalo</button>
+    <div class="actions"><button class="btn" type="submit">Guardar mi lista</button>
+    ${S.drawn?"":`<button type="button" class="btn ghost" id="leave">Salirme</button>`}</div>
+    <div class="msg" id="meMsg"></div></form>`;
+  const f = $("#meForm"); wireGifts(f);
+  $("#copy").onclick = async () => { try{ await navigator.clipboard.writeText(personal); $("#copy").textContent="¡Copiado!"; }catch{ $("#copy").textContent="Cópialo a mano"; } };
+  f.onsubmit = async e => {
+    e.preventDefault();
+    try{ await api("me",{email:$("#mEmail").value,gifts:readGifts(f)}); editing=false; $("#meMsg").className="msg ok"; await load(); $("#meMsg") && ($("#meMsg").className="msg ok", $("#meMsg").textContent="Guardado."); }
+    catch(err){ $("#meMsg").className="msg err"; $("#meMsg").textContent = err.message; }
+  };
+  const lv = $("#leave");
+  if (lv) lv.onclick = async () => {
+    if (lv.dataset.sure !== "1"){ lv.dataset.sure="1"; lv.textContent="¿Seguro? Toca otra vez"; return; }
+    try{ await api("leave",{}); ls.del("posada_token"); token=null; history.replaceState(null,"","/"); editing=false; await load(); }
+    catch(err){ $("#meMsg").className="msg err"; $("#meMsg").textContent = err.message; }
+  };
+}
+
+let orgOk = false;
+function renderOrg(){
+  const c = $("#orgCard");
+  if (c.contains(document.activeElement) && document.activeElement.tagName==="INPUT") return;
+  if (!orgOk){
+    c.innerHTML = `<form id="pinForm"><label for="pin">PIN del organizador</label>
+      <div class="actions" style="margin-top:0"><input id="pin" type="password" inputmode="numeric" style="max-width:200px" value="${esc(pin)}"><button class="btn" type="submit">Entrar</button></div>
+      <div class="msg" id="pinMsg"></div></form>`;
+    $("#pinForm").onsubmit = async e => {
+      e.preventDefault(); pin = $("#pin").value;
+      try{ await api("admin",{pin,op:"check"}); orgOk = true; ls.set("posada_pin",pin); renderOrg(); }
+      catch(err){ $("#pinMsg").className="msg err"; $("#pinMsg").textContent = err.message; }
+    };
+    return;
+  }
+  const n = S.participants.length;
+  c.innerHTML = S.drawn
+    ? `<p><b>Sorteo hecho.</b> Cada quien abre la página en su teléfono y toca “Girar y descubrir”.</p>
+       <div class="actions"><button class="btn ghost" id="reset">Reiniciar sorteo</button></div><div class="msg" id="orgMsg"></div>`
+    : `<p>Cuando estén todos juntos, toca el botón. La ruleta gira y el servidor arma las parejas en secreto (nadie se toca a sí mismo).</p>
+       <div class="actions"><button class="btn gold" id="go" ${n<3?"disabled":""}>Girar la ruleta y sortear (${n})</button></div>
+       ${n<3?`<p class="hint">Se necesitan al menos 3 personas.</p>`:""}
+       <div class="msg" id="orgMsg"></div>
+       <div style="margin-top:14px">${S.participants.map(p=>`<div class="orgrow"><span>${esc(p.name)}</span><button class="btn ghost small" data-rm="${esc(p.id)}">Quitar</button></div>`).join("")}</div>`;
+  const go = $("#go");
+  if (go) go.onclick = async () => {
+    go.disabled = true;
+    document.querySelector(".hero").scrollIntoView({behavior:"smooth"});
+    try{
+      const r = await api("admin",{pin,op:"draw"});
+      await spinTo(Math.floor(Math.random()*n), n);
+      await load();
+      $("#orgMsg").className="msg ok";
+      $("#orgMsg").textContent = `¡Listo! ${r.count} personas sorteadas${r.emailed?`, ${r.emailed} correos enviados`:""}.`;
+    }catch(err){ $("#orgMsg").className="msg err"; $("#orgMsg").textContent = err.message; go.disabled=false; }
+  };
+  const rs = $("#reset");
+  if (rs) rs.onclick = async () => {
+    if (rs.dataset.sure !== "1"){ rs.dataset.sure="1"; rs.textContent="¿Seguro? Se borran las parejas"; return; }
+    try{ await api("admin",{pin,op:"reset"}); revealed=false; await load(); }catch(err){ $("#orgMsg").textContent = err.message; }
+  };
+  c.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => {
+    if (b.dataset.sure !== "1"){ b.dataset.sure="1"; b.textContent="¿Quitar?"; return; }
+    try{ await api("admin",{pin,op:"remove",id:b.dataset.rm}); await load(); }catch(err){ $("#orgMsg").textContent = err.message; }
+  });
+}
+
+async function load(){
+  try{
+    S = await api("state");
+    if (token && !S.me && !S.drawn){ /* token viejo */ }
+    render();
+  }catch(err){ console.error(err); }
+}
+if (pin) api("admin",{pin,op:"check"}).then(()=>{orgOk=true;renderOrg()}).catch(()=>{});
+load();
+setInterval(() => { if (!document.hidden && !$("#wheelbox").classList.contains("spinning-now")) load(); }, 6000);
+}
+</script>
+</body>
+</html>
